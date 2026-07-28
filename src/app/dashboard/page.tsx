@@ -64,6 +64,13 @@ import {
   formatVolumeKg,
 } from '@/lib/workout-analytics'
 import {
+  findPlanDayByWeekday,
+  getTomorrowWeekday,
+  isWorkoutDay,
+  planDaySessionName,
+  planDayToSessionExercises,
+} from '@/lib/plan-day'
+import {
   MuscleMap,
   ZoomableAnatomy,
   WORKOUT_MUSCLES,
@@ -537,6 +544,19 @@ export default function DashboardPage() {
     return activePlan.days.find((d) => d.dayOfWeek === dayOfWeek) ?? null
   }, [activePlan, hydrated])
 
+  const tomorrowDay = useMemo(() => {
+    if (!hydrated || !activePlan) return null
+    return findPlanDayByWeekday(activePlan, getTomorrowWeekday())
+  }, [activePlan, hydrated])
+
+  const canTakeTomorrowWorkout = Boolean(tomorrowDay && isWorkoutDay(tomorrowDay))
+  const tomorrowWorkoutLabel = useMemo(() => {
+    if (!tomorrowDay?.dayOfWeek) return null
+    const weekday = WEEKDAY_LABELS[tomorrowDay.dayOfWeek - 1]
+    const focus = tomorrowDay.muscleFocus || tomorrowDay.name
+    return `${weekday} · ${focus}`
+  }, [tomorrowDay])
+
   const workoutSplit = todayDay?.muscleFocus || todayDay?.name || 'Custom Workout'
   const workoutDayLabel = todayDay
     ? todayDay.dayOfWeek
@@ -748,27 +768,31 @@ export default function DashboardPage() {
     return map
   }, [recoveryList])
 
-  const handleContinue = () => {
+  const startFromPlanDay = (day: PlanDay | null, nameSuffix?: string) => {
     const session = useWorkoutStore.getState().activeSession
-    if (!session) {
-      const day = todayDay
-      const sessionName = day
-        ? `${day.name}${day.muscleFocus ? ` · ${day.muscleFocus}` : ''}`
-        : 'Quick Workout'
+    if (session) {
+      router.push('/workout')
+      return
+    }
+
+    if (day && isWorkoutDay(day)) {
       startWorkout(
-        sessionName,
-        day?.exercises.map((ex) => ({
-          exerciseId: ex.exerciseId,
-          name: ex.name,
-          categoryName: ex.category,
-          equipment: ex.equipment,
-          targetSets: ex.targetSets,
-          targetReps: ex.targetReps,
-          restSeconds: ex.restSeconds,
-        }))
+        planDaySessionName(day, nameSuffix),
+        planDayToSessionExercises(day)
       )
+    } else {
+      startWorkout('Quick Workout')
     }
     router.push('/workout')
+  }
+
+  const handleContinue = () => {
+    startFromPlanDay(todayDay && !todayDay.isRestDay ? todayDay : null)
+  }
+
+  const handleStartTomorrowWorkout = () => {
+    if (!tomorrowDay || !isWorkoutDay(tomorrowDay)) return
+    startFromPlanDay(tomorrowDay, 'Tomorrow')
   }
 
   const lifetimeStats = [
@@ -999,6 +1023,20 @@ export default function DashboardPage() {
                 Another Session
               </button>
             </div>
+            {canTakeTomorrowWorkout && !activeSession && (
+              <button
+                type="button"
+                onClick={handleStartTomorrowWorkout}
+                className="w-full mt-2 h-[44px] rounded-[14px] border border-border bg-muted/60 text-sm font-semibold text-foreground flex flex-col items-center justify-center gap-0.5 cursor-pointer active:scale-[0.98]"
+              >
+                <span>Take Tomorrow&apos;s Workout</span>
+                {tomorrowWorkoutLabel && (
+                  <span className="text-[10px] font-medium text-muted-foreground">
+                    {tomorrowWorkoutLabel}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         ) : todayDay && !todayDay.isRestDay ? (
           <>
@@ -1124,6 +1162,16 @@ export default function DashboardPage() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
+            {canTakeTomorrowWorkout && !activeSession && (
+              <button
+                type="button"
+                onClick={handleStartTomorrowWorkout}
+                className="mt-2 w-full text-center text-xs font-semibold text-primary cursor-pointer active:opacity-70"
+              >
+                Do tomorrow&apos;s workout instead
+                {tomorrowWorkoutLabel ? ` · ${tomorrowWorkoutLabel}` : ''}
+              </button>
+            )}
           </>
         ) : (
           <div className="space-y-4">
@@ -1180,6 +1228,20 @@ export default function DashboardPage() {
                 Quick Start
               </button>
             </div>
+            {canTakeTomorrowWorkout && !activeSession && (
+              <button
+                type="button"
+                onClick={handleStartTomorrowWorkout}
+                className="w-full h-11 rounded-[14px] border border-border bg-muted/60 text-sm font-semibold text-foreground flex flex-col items-center justify-center gap-0.5 cursor-pointer active:scale-[0.98]"
+              >
+                <span>Take Tomorrow&apos;s Workout</span>
+                {tomorrowWorkoutLabel && (
+                  <span className="text-[10px] font-medium text-muted-foreground">
+                    {tomorrowWorkoutLabel}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         )}
       </section>
