@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { ArrowLeft, Dumbbell, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Dumbbell, ImagePlus, Pencil, Trash2 } from 'lucide-react'
 import { getExerciseById, toLegacyExercise } from '@/data/exercises'
 import { ExerciseVideoPreview } from '@/components/exercises/ExerciseVideoPreview'
+import { ExerciseAddDemoSheet } from '@/components/exercises/ExerciseAddDemoSheet'
 import { MuscleFocusPreview } from '@/components/muscle-map'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { useExerciseStore } from '@/stores/exerciseStore'
@@ -48,13 +49,15 @@ export default function ExerciseDetailPage() {
   const router = useRouter()
   const storeHydrated = useExerciseStoreHydrated()
   const customExercises = useExerciseStore((s) => s.exercises)
+  const mediaOverrides = useExerciseStore((s) => s.mediaOverrides)
   const deleteExercise = useExerciseStore((s) => s.deleteExercise)
   const exercise = useMemo(
-    () => (exerciseId ? getExerciseById(exerciseId, customExercises) : undefined),
-    [exerciseId, customExercises]
+    () => (exerciseId ? getExerciseById(exerciseId, customExercises, mediaOverrides) : undefined),
+    [exerciseId, customExercises, mediaOverrides]
   )
   const { activeSession } = useWorkoutStore()
   const [showDelete, setShowDelete] = useState(false)
+  const [addDemoOpen, setAddDemoOpen] = useState(false)
   const [portalReady, setPortalReady] = useState(false)
 
   useEffect(() => {
@@ -215,7 +218,7 @@ export default function ExerciseDetailPage() {
           )}
         </div>
 
-        {exercise.videoUrl && (
+        {exercise.videoUrl ? (
           <div className="space-y-3">
             <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Demo video
@@ -226,7 +229,23 @@ export default function ExerciseDetailPage() {
                 title={`${exercise.name} demo`}
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setAddDemoOpen(true)}
+              className="text-xs font-semibold text-primary cursor-pointer"
+            >
+              Edit demo media
+            </button>
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAddDemoOpen(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-[20px] border border-dashed border-border bg-card px-4 py-5 text-sm font-semibold text-foreground cursor-pointer active:scale-[0.99]"
+          >
+            <ImagePlus className="w-4 h-4 text-primary" />
+            Add demo photo or video
+          </button>
         )}
 
         <div className="space-y-3">
@@ -295,6 +314,15 @@ export default function ExerciseDetailPage() {
           </div>,
           document.body
         )}
+
+      <ExerciseAddDemoSheet
+        open={addDemoOpen}
+        onOpenChange={setAddDemoOpen}
+        exerciseId={exercise.id}
+        exerciseName={exercise.name}
+        initialImageUrl={exercise.imageUrl}
+        initialVideoUrl={exercise.videoUrl}
+      />
     </div>
   )
 }

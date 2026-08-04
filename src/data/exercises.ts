@@ -898,18 +898,49 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
 
 export const WEEKDAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const
 
-export function getExerciseById(id: string, customExercises: CatalogExercise[] = []) {
+export function applyExerciseMediaOverride<T extends CatalogExercise>(
+  exercise: T,
+  override?: { imageUrl?: string; videoUrl?: string } | null
+): T {
+  if (!override) return exercise
+  const next = { ...exercise }
+  if (override.imageUrl?.trim()) next.imageUrl = override.imageUrl.trim()
+  if (override.videoUrl !== undefined) {
+    const v = override.videoUrl.trim()
+    if (v) next.videoUrl = v
+    else delete next.videoUrl
+  }
+  return next
+}
+
+export function getExerciseById(
+  id: string,
+  customExercises: CatalogExercise[] = [],
+  mediaOverrides: Record<string, { imageUrl?: string; videoUrl?: string }> = {}
+) {
   const custom = customExercises.find((e) => e.id === id)
-  if (custom) return withNormalizedAnatomy(custom)
-  return EXERCISE_CATALOG.find((e) => e.id === id)
+  const base = custom
+    ? withNormalizedAnatomy(custom)
+    : EXERCISE_CATALOG.find((e) => e.id === id)
+  if (!base) return undefined
+  return applyExerciseMediaOverride(base, mediaOverrides[id])
 }
 
-export function getAllExercises(customExercises: CatalogExercise[] = []) {
-  return [...customExercises.map(withNormalizedAnatomy), ...EXERCISE_CATALOG]
+export function getAllExercises(
+  customExercises: CatalogExercise[] = [],
+  mediaOverrides: Record<string, { imageUrl?: string; videoUrl?: string }> = {}
+) {
+  const all = [...customExercises.map(withNormalizedAnatomy), ...EXERCISE_CATALOG]
+  if (Object.keys(mediaOverrides).length === 0) return all
+  return all.map((ex) => applyExerciseMediaOverride(ex, mediaOverrides[ex.id]))
 }
 
-export function getExercisesByGroup(group: string, customExercises: CatalogExercise[] = []) {
-  const all = getAllExercises(customExercises)
+export function getExercisesByGroup(
+  group: string,
+  customExercises: CatalogExercise[] = [],
+  mediaOverrides: Record<string, { imageUrl?: string; videoUrl?: string }> = {}
+) {
+  const all = getAllExercises(customExercises, mediaOverrides)
   if (group === 'All') return all
   return all.filter((e) => e.muscleGroup === group)
 }

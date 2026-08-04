@@ -4,6 +4,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
   buildCustomExercise,
+  DEFAULT_EXERCISE_IMAGE,
   getMuscleGroupDefaults,
   withNormalizedAnatomy,
   type BuiltInMuscleGroup,
@@ -13,10 +14,19 @@ import {
 
 const STORAGE_KEY = 'gymtrack-custom-exercises'
 
+export type ExerciseMediaOverride = {
+  imageUrl?: string
+  videoUrl?: string
+}
+
 type ExerciseState = {
   exercises: CatalogExercise[]
+  /** Demo photo/video overrides for built-in (and any) catalog ids. */
+  mediaOverrides: Record<string, ExerciseMediaOverride>
   createExercise: (input: CreateExerciseInput) => string
   updateExercise: (id: string, input: CreateExerciseInput) => void
+  /** Patch demo image/video. Custom exercises update in place; built-ins use mediaOverrides. */
+  setExerciseMedia: (id: string, media: { imageUrl?: string; videoUrl?: string }) => void
   deleteExercise: (id: string) => void
   reassignMuscleGroup: (
     fromGroup: string,
@@ -30,6 +40,7 @@ export const useExerciseStore = create<ExerciseState>()(
   persist(
     (set, get) => ({
       exercises: [],
+      mediaOverrides: {},
 
       createExercise: (input) => {
         const exercise = buildCustomExercise(input)
@@ -43,6 +54,47 @@ export const useExerciseStore = create<ExerciseState>()(
             ex.id === id ? buildCustomExercise(input, id) : ex
           ),
         }))
+      },
+
+      setExerciseMedia: (id, media) => {
+        set((state) => {
+          const customIdx = state.exercises.findIndex((e) => e.id === id)
+          if (customIdx >= 0) {
+            const next = [...state.exercises]
+            const ex: CatalogExercise = { ...next[customIdx] }
+            if (media.imageUrl !== undefined) {
+              ex.imageUrl = media.imageUrl.trim() || DEFAULT_EXERCISE_IMAGE
+            }
+            if (media.videoUrl !== undefined) {
+              const v = media.videoUrl.trim()
+              if (v) ex.videoUrl = v
+              else delete ex.videoUrl
+            }
+            next[customIdx] = ex
+            return { exercises: next }
+          }
+
+          const prev = state.mediaOverrides[id] ?? {}
+          const nextOverride: ExerciseMediaOverride = { ...prev }
+          if (media.imageUrl !== undefined) {
+            const img = media.imageUrl.trim()
+            if (img && img !== DEFAULT_EXERCISE_IMAGE) nextOverride.imageUrl = img
+            else delete nextOverride.imageUrl
+          }
+          if (media.videoUrl !== undefined) {
+            const v = media.videoUrl.trim()
+            if (v) nextOverride.videoUrl = v
+            else delete nextOverride.videoUrl
+          }
+
+          const mediaOverrides = { ...state.mediaOverrides }
+          if (!nextOverride.imageUrl && !nextOverride.videoUrl) {
+            delete mediaOverrides[id]
+          } else {
+            mediaOverrides[id] = nextOverride
+          }
+          return { mediaOverrides }
+        })
       },
 
       deleteExercise: (id) => {
@@ -78,13 +130,18 @@ export const useExerciseStore = create<ExerciseState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 2,
+      version: 3,
       migrate: (persisted) => {
-        const state = persisted as { exercises?: CatalogExercise[] }
-        if (!state?.exercises) return persisted as { exercises: CatalogExercise[] }
+        const state = persisted as {
+          exercises?: CatalogExercise[]
+          mediaOverrides?: Record<string, ExerciseMediaOverride>
+        }
+        if (!state?.exercises) {
+          return { exercises: [], mediaOverrides: state?.mediaOverrides ?? {} }
+        }
         return {
-          ...state,
           exercises: state.exercises.map(withNormalizedAnatomy),
+          mediaOverrides: state.mediaOverrides ?? {},
         }
       },
     }
@@ -101,5 +158,19 @@ export function getCustomExercisesSnapshot(): CatalogExercise[] {
     return parsed.state?.exercises ?? []
   } catch {
     return []
+  }
+}
+
+export function getMediaOverridesSnapshot(): Record<string, ExerciseMediaOverride> {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as {
+      state?: { mediaOverrides?: Record<string, ExerciseMediaOverride> }
+    }
+    return parsed.state?.mediaOverrides ?? {}
+  } catch {
+    return {}
   }
 }

@@ -19,9 +19,10 @@ import { RepPicker } from '@/components/workout/RepPicker'
 import { WorkoutRestCircle } from '@/components/workout/WorkoutRestCircle'
 import { WorkoutExerciseMediaBackdrop } from '@/components/workout/WorkoutExerciseMediaBackdrop'
 import { WorkoutExerciseDemoSheet } from '@/components/workout/WorkoutExerciseDemoSheet'
+import { ExerciseAddDemoSheet } from '@/components/exercises/ExerciseAddDemoSheet'
 import { useWakeLock } from '@/hooks/useWakeLock'
 import { requestNotificationPermission, unlockRestSound } from '@/lib/notifications'
-import { Dumbbell, Plus, Check, Timer, Play, Flag, ChevronRight, SkipForward, ListOrdered } from 'lucide-react'
+import { Dumbbell, Plus, Check, Timer, Play, Flag, ChevronRight, SkipForward, ListOrdered, ImagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SpotifyMiniPlayer } from '@/components/spotify/spotify-mini-player'
 import { getExerciseById } from '@/data/exercises'
@@ -69,9 +70,11 @@ export default function WorkoutPage() {
   const [showCancel, setShowCancel] = useState(false)
   const [showUpNext, setShowUpNext] = useState(false)
   const [demoVideoOpen, setDemoVideoOpen] = useState(false)
+  const [addDemoOpen, setAddDemoOpen] = useState(false)
   const [summary, setSummary] = useState<ReturnType<typeof finishWorkout> | null>(null)
   const [portalReady, setPortalReady] = useState(false)
   const customExercises = useExerciseStore((s) => s.exercises)
+  const mediaOverrides = useExerciseStore((s) => s.mediaOverrides)
 
   // Keep screen on during an active workout (supported browsers)
   useWakeLock(Boolean(activeSession) && !summary)
@@ -147,17 +150,21 @@ export default function WorkoutPage() {
     }
   }, [activeSession, currentSet])
 
-  const currentExerciseVideoUrl = useMemo(() => {
+  const currentCatalogExercise = useMemo(() => {
     const exerciseId = setContext?.exercise.exerciseId
     if (!exerciseId) return null
-    const exercise = getExerciseById(exerciseId, customExercises)
-    const videoUrl = exercise?.videoUrl?.trim()
+    return getExerciseById(exerciseId, customExercises, mediaOverrides) ?? null
+  }, [setContext?.exercise.exerciseId, customExercises, mediaOverrides])
+
+  const currentExerciseVideoUrl = useMemo(() => {
+    const videoUrl = currentCatalogExercise?.videoUrl?.trim()
     if (!videoUrl || !hasExerciseVideoPreview(videoUrl)) return null
     return videoUrl
-  }, [setContext?.exercise.exerciseId, customExercises])
+  }, [currentCatalogExercise])
 
   useEffect(() => {
     setDemoVideoOpen(false)
+    setAddDemoOpen(false)
   }, [setContext?.exercise.exerciseId])
 
   const handleSkipExercise = () => {
@@ -503,7 +510,7 @@ export default function WorkoutPage() {
                 </p>
               )}
 
-              {currentExerciseVideoUrl && (
+              {currentExerciseVideoUrl ? (
                 <button
                   type="button"
                   onClick={() => setDemoVideoOpen(true)}
@@ -511,6 +518,15 @@ export default function WorkoutPage() {
                 >
                   <Play className="w-4 h-4 text-primary fill-primary/20" />
                   View demo video
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAddDemoOpen(true)}
+                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-dashed border-border bg-card/90 px-4 py-2 text-sm font-semibold text-foreground backdrop-blur-sm active:scale-[0.98] transition-all"
+                >
+                  <ImagePlus className="w-4 h-4 text-primary" />
+                  Add demo
                 </button>
               )}
 
@@ -714,6 +730,17 @@ export default function WorkoutPage() {
           onOpenChange={setDemoVideoOpen}
           exerciseName={setContext.exercise.name}
           videoUrl={currentExerciseVideoUrl}
+        />
+      )}
+
+      {setContext && (
+        <ExerciseAddDemoSheet
+          open={addDemoOpen}
+          onOpenChange={setAddDemoOpen}
+          exerciseId={setContext.exercise.exerciseId}
+          exerciseName={setContext.exercise.name}
+          initialImageUrl={currentCatalogExercise?.imageUrl}
+          initialVideoUrl={currentCatalogExercise?.videoUrl}
         />
       )}
     </div>

@@ -6,5 +6,9 @@ import { useExerciseStore } from '@/stores/exerciseStore'
 
 export function useMergedExercises() {
   const customExercises = useExerciseStore((s) => s.exercises)
-  return useMemo(() => getAllExercises(customExercises), [customExercises])
+  const mediaOverrides = useExerciseStore((s) => s.mediaOverrides)
+  return useMemo(
+    () => getAllExercises(customExercises, mediaOverrides),
+    [customExercises, mediaOverrides]
+  )
 }

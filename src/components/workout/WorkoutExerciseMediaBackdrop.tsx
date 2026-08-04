@@ -22,10 +22,11 @@ export function WorkoutExerciseMediaBackdrop({
   active = true,
 }: WorkoutExerciseMediaBackdropProps) {
   const customExercises = useExerciseStore((s) => s.exercises)
+  const mediaOverrides = useExerciseStore((s) => s.mediaOverrides)
 
   const media = useMemo(() => {
     if (!exerciseId) return null
-    const exercise = getExerciseById(exerciseId, customExercises)
+    const exercise = getExerciseById(exerciseId, customExercises, mediaOverrides)
     if (!exercise) return null
 
     const videoUrl = exercise.videoUrl?.trim()
@@ -35,7 +36,7 @@ export function WorkoutExerciseMediaBackdrop({
     if (video) return { kind: 'video' as const, url: videoUrl! }
     if (imageUrl) return { kind: 'image' as const, url: imageUrl }
     return null
-  }, [exerciseId, customExercises])
+  }, [exerciseId, customExercises, mediaOverrides])
 
   if (!active || !media) return null
 

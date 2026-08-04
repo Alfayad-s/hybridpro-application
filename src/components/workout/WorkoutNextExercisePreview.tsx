@@ -22,10 +22,11 @@ export function WorkoutNextExercisePreview({
   setLabel,
 }: WorkoutNextExercisePreviewProps) {
   const customExercises = useExerciseStore((s) => s.exercises)
+  const mediaOverrides = useExerciseStore((s) => s.mediaOverrides)
 
   const exercise = useMemo(
-    () => getExerciseById(exerciseId, customExercises),
-    [exerciseId, customExercises]
+    () => getExerciseById(exerciseId, customExercises, mediaOverrides),
+    [exerciseId, customExercises, mediaOverrides]
   )
 
   const videoUrl = exercise?.videoUrl?.trim()
