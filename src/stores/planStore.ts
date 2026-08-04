@@ -88,6 +88,8 @@ type PlanState = {
     fields: Partial<Pick<PlanExercise, 'targetSets' | 'targetReps' | 'restSeconds' | 'notes'>>
   ) => void
   removeDayExercise: (planId: string, dayId: string, exerciseRowId: string) => void
+  /** Replace target days' exercises with a deep copy of the source day's workout. */
+  repeatDayToDays: (planId: string, sourceDayId: string, targetDayIds: string[]) => void
   getActivePlan: () => WorkoutPlan | null
   getPlan: (planId: string) => WorkoutPlan | undefined
   getDay: (planId: string, dayId: string) => PlanDay | undefined
@@ -450,6 +452,37 @@ export const usePlanStore = create<PlanState>()(
             ),
           })),
         })),
+
+      repeatDayToDays: (planId, sourceDayId, targetDayIds) => {
+        const targets = [...new Set(targetDayIds)].filter((id) => id !== sourceDayId)
+        if (targets.length === 0) return
+
+        set((state) => ({
+          plans: mapPlan(state.plans, planId, (plan) => {
+            const source = plan.days.find((d) => d.id === sourceDayId)
+            if (!source || source.exercises.length === 0) return plan
+
+            const targetSet = new Set(targets)
+            return {
+              ...plan,
+              days: plan.days.map((day) => {
+                if (!targetSet.has(day.id)) return day
+                return {
+                  ...day,
+                  muscleFocus: source.muscleFocus,
+                  isRestDay: false,
+                  exercises: source.exercises.map((ex, i) => ({
+                    ...ex,
+                    id: uid(),
+                    secondaryMuscles: [...(ex.secondaryMuscles ?? [])],
+                    order: i,
+                  })),
+                }
+              }),
+            }
+          }),
+        }))
+      },
 
       getActivePlan: () => get().plans.find((p) => p.isActive) ?? get().plans[0] ?? null,
 

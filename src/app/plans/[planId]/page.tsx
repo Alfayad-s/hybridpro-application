@@ -10,9 +10,11 @@ import {
   Trash2,
   Dumbbell,
   Coffee,
+  Copy,
 } from 'lucide-react'
 import { usePlanStore } from '@/stores/planStore'
 import { WEEKDAY_LABELS } from '@/data/exercises'
+import { RepeatDayModal } from '@/components/plans/RepeatDayModal'
 
 export default function PlanDetailPage() {
   const { planId } = useParams<{ planId: string }>()
@@ -24,6 +26,7 @@ export default function PlanDetailPage() {
   const updateDay = usePlanStore((s) => s.updateDay)
   const deleteDay = usePlanStore((s) => s.deleteDay)
   const deletePlan = usePlanStore((s) => s.deletePlan)
+  const repeatDayToDays = usePlanStore((s) => s.repeatDayToDays)
 
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
@@ -31,11 +34,25 @@ export default function PlanDetailPage() {
   const [dayName, setDayName] = useState('')
   const [muscleFocus, setMuscleFocus] = useState('')
   const [dayOfWeek, setDayOfWeek] = useState<number | ''>('')
+  const [repeatSourceDayId, setRepeatSourceDayId] = useState<string | null>(null)
 
   const sortedDays = useMemo(
     () => (plan ? [...plan.days].sort((a, b) => a.order - b.order) : []),
     [plan]
   )
+
+  const repeatSourceDay = useMemo(
+    () => (repeatSourceDayId ? sortedDays.find((d) => d.id === repeatSourceDayId) ?? null : null),
+    [repeatSourceDayId, sortedDays]
+  )
+
+  const repeatOtherDays = useMemo(
+    () => (repeatSourceDayId ? sortedDays.filter((d) => d.id !== repeatSourceDayId) : []),
+    [repeatSourceDayId, sortedDays]
+  )
+
+  const repeatMode =
+    repeatSourceDay && repeatSourceDay.exercises.length > 0 ? 'spread' : 'fill'
 
   if (!plan) {
     return (
@@ -272,6 +289,19 @@ export default function PlanDetailPage() {
                   <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                 </button>
                 <div className="px-4 pb-3 flex items-center gap-3 flex-wrap">
+                  {sortedDays.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setRepeatSourceDayId(day.id)
+                      }}
+                      className="h-8 px-3 rounded-full bg-muted border border-border text-[11px] font-bold text-foreground flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      Repeat day
+                    </button>
+                  )}
                   {showRestMark && (
                     <button
                       type="button"
@@ -306,6 +336,26 @@ export default function PlanDetailPage() {
           })}
         </div>
       )}
+
+      <RepeatDayModal
+        open={repeatSourceDayId != null}
+        onOpenChange={(open) => {
+          if (!open) setRepeatSourceDayId(null)
+        }}
+        anchorDay={repeatSourceDay}
+        otherDays={repeatOtherDays}
+        mode={repeatMode}
+        onConfirm={(selectedIds) => {
+          if (!repeatSourceDayId) return
+          if (repeatMode === 'spread') {
+            repeatDayToDays(plan.id, repeatSourceDayId, selectedIds)
+          } else {
+            const fromId = selectedIds[0]
+            if (fromId) repeatDayToDays(plan.id, fromId, [repeatSourceDayId])
+          }
+          setRepeatSourceDayId(null)
+        }}
+      />
     </div>
   )
 }
