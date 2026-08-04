@@ -396,6 +396,8 @@ const actionSchemas: Record<AgentActionName, z.ZodType<Record<string, unknown>>>
   set_meal_goals: z.object({
     dailyCalorieGoal: z.number().int().min(500).max(10000).optional(),
     dailyProteinGoal: z.number().int().min(20).max(500).optional(),
+    dailyCarbsGoal: z.number().int().min(20).max(1000).optional(),
+    dailyFatGoal: z.number().int().min(10).max(500).optional(),
     dailyWaterGoalMl: z.number().int().min(500).max(10000).optional(),
   }),
 }
@@ -534,6 +536,8 @@ export type AgentContext = {
     today: string
     dailyCalorieGoal: number
     dailyProteinGoal: number
+    dailyCarbsGoal: number
+    dailyFatGoal: number
     dailyWaterGoalMl: number
     waterTotalMl: number
     todaysMeals: Array<{
@@ -546,6 +550,14 @@ export type AgentContext = {
       fatG: number
     }>
     recentWater: Array<{ id: string; amountMl: number }>
+    activeMealPlan?: {
+      id: string
+      name: string
+      mealsPerDay: number
+      todayDayName: string
+      slotCount: number
+      plannedItemCount: number
+    } | null
   }
 }
 

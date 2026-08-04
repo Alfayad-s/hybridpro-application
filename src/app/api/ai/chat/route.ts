@@ -95,11 +95,17 @@ function sanitizeContext(context: unknown): AgentContext | null {
       today: new Date().toISOString().slice(0, 10),
       dailyCalorieGoal: 2500,
       dailyProteinGoal: 160,
+      dailyCarbsGoal: 250,
+      dailyFatGoal: 70,
       dailyWaterGoalMl: 3000,
       waterTotalMl: 0,
       todaysMeals: [],
       recentWater: [],
+      activeMealPlan: null,
     }
+  } else {
+    if (typeof c.meals.dailyCarbsGoal !== 'number') c.meals.dailyCarbsGoal = 250
+    if (typeof c.meals.dailyFatGoal !== 'number') c.meals.dailyFatGoal = 70
   }
   return c
 }

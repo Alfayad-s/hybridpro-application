@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import {
   Apple,
@@ -9,9 +10,11 @@ import {
   Droplets,
   Loader2,
   Plus,
+  Settings2,
   Trash2,
   UtensilsCrossed,
   Moon,
+  ChevronRight,
 } from 'lucide-react'
 import {
   MEAL_TYPE_LABELS,
@@ -23,9 +26,15 @@ import {
   useMealStore,
   type MealType,
 } from '@/stores/mealStore'
+import { useMealPlanStore, type MealPlanSlot } from '@/stores/mealPlanStore'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { MealLogSheet } from '@/components/meals/MealLogSheet'
+import { MealGoalsSheet } from '@/components/meals/MealGoalsSheet'
+import {
+  NoMealPlanCard,
+  TodayMealPlanSlots,
+} from '@/components/meals/TodayMealPlanSlots'
 
 const TYPE_ICON: Record<MealType, typeof Coffee> = {
   breakfast: Coffee,
@@ -36,18 +45,32 @@ const TYPE_ICON: Record<MealType, typeof Coffee> = {
 
 function waitForHydration() {
   return new Promise<void>((resolve) => {
-    if (useMealStore.persist?.hasHydrated?.()) {
-      resolve()
-      return
+    let pending = 2
+    const done = () => {
+      pending -= 1
+      if (pending <= 0) resolve()
     }
-    const unsub = useMealStore.persist?.onFinishHydration?.(() => {
-      unsub?.()
-      resolve()
-    })
-    setTimeout(() => {
-      unsub?.()
-      resolve()
-    }, 800)
+
+    const waitStore = (store: {
+      persist?: {
+        hasHydrated?: () => boolean
+        onFinishHydration?: (fn: () => void) => () => void
+      }
+    }) => {
+      if (store.persist?.hasHydrated?.()) {
+        done()
+        return
+      }
+      const unsub = store.persist?.onFinishHydration?.(() => {
+        unsub?.()
+        done()
+      })
+      if (!unsub) done()
+    }
+
+    waitStore(useMealStore)
+    waitStore(useMealPlanStore)
+    setTimeout(() => resolve(), 800)
   })
 }
 
@@ -96,20 +119,27 @@ async function analyzeMeal(input: { imageUrl?: string; description?: string; hin
 }
 
 export default function MealsPage() {
+  const router = useRouter()
   const meals = useMealStore((s) => s.meals)
   const waterLogs = useMealStore((s) => s.waterLogs)
   const dailyCalorieGoal = useMealStore((s) => s.dailyCalorieGoal)
   const dailyProteinGoal = useMealStore((s) => s.dailyProteinGoal)
+  const dailyCarbsGoal = useMealStore((s) => s.dailyCarbsGoal)
+  const dailyFatGoal = useMealStore((s) => s.dailyFatGoal)
   const dailyWaterGoalMl = useMealStore((s) => s.dailyWaterGoalMl)
   const addMeal = useMealStore((s) => s.addMeal)
   const deleteMeal = useMealStore((s) => s.deleteMeal)
   const addWater = useMealStore((s) => s.addWater)
   const removeWater = useMealStore((s) => s.removeWater)
   const getWaterTotalMl = useMealStore((s) => s.getWaterTotalMl)
+  const mealPlans = useMealPlanStore((s) => s.plans)
+  const getTodayDay = useMealPlanStore((s) => s.getTodayDay)
   const user = useAuthStore((s) => s.user)
 
   const [hydrated, setHydrated] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showGoals, setShowGoals] = useState(false)
+  const [pendingSlotId, setPendingSlotId] = useState<string | null>(null)
   const [type, setType] = useState<MealType>(() => mealTypeFromTime())
   const [name, setName] = useState('')
   const [calories, setCalories] = useState('')
@@ -138,6 +168,16 @@ export default function MealsPage() {
     }
   }, [])
 
+  const todayPlan = useMemo(() => {
+    if (!hydrated) return null
+    return getTodayDay()
+  }, [hydrated, mealPlans, getTodayDay])
+
+  const activeMealPlan = useMemo(() => {
+    if (!hydrated) return null
+    return mealPlans.find((p) => p.isActive) ?? mealPlans[0] ?? null
+  }, [hydrated, mealPlans])
+
   const todaysMeals = useMemo(
     () => (hydrated ? meals.filter((m) => m.date === date) : []),
     [hydrated, meals, date]
@@ -156,6 +196,8 @@ export default function MealsPage() {
   const totals = useMemo(() => summarizeMeals(todaysMeals), [todaysMeals])
   const caloriePct = Math.min(100, Math.round((totals.calories / dailyCalorieGoal) * 100))
   const proteinPct = Math.min(100, Math.round((totals.proteinG / dailyProteinGoal) * 100))
+  const carbsPct = Math.min(100, Math.round((totals.carbsG / Math.max(1, dailyCarbsGoal)) * 100))
+  const fatPct = Math.min(100, Math.round((totals.fatG / Math.max(1, dailyFatGoal)) * 100))
   const waterPct = Math.min(
     100,
     Math.round((waterTotalMl / Math.max(1, dailyWaterGoalMl)) * 100)
@@ -220,8 +262,17 @@ export default function MealsPage() {
     await syncWaterToChallenges(nextTotal)
   }
 
-  const openForm = () => {
-    setType(mealTypeFromTime())
+  const openForm = (opts?: { type?: MealType; slotId?: string; prefill?: MealPlanSlot }) => {
+    setType(opts?.type ?? mealTypeFromTime())
+    setPendingSlotId(opts?.slotId ?? null)
+    if (opts?.prefill?.items[0]) {
+      const first = opts.prefill.items[0]
+      setName(first.name)
+      setCalories(String(first.calories))
+      setProtein(String(first.proteinG))
+      setCarbs(String(first.carbsG))
+      setFat(String(first.fatG))
+    }
     setShowForm(true)
     setPhotoError(null)
     setAiNote(null)
@@ -235,9 +286,39 @@ export default function MealsPage() {
     setFat('')
     setImageUrl('')
     setType(mealTypeFromTime())
+    setPendingSlotId(null)
     setPhotoError(null)
     setAiNote(null)
     setShowForm(false)
+  }
+
+  const handleLogPlanned = (slot: MealPlanSlot) => {
+    if (slot.items.length === 0) return
+    const typeGuess =
+      slot.label.toLowerCase().startsWith('breakfast')
+        ? 'breakfast'
+        : slot.label.toLowerCase().startsWith('lunch')
+          ? 'lunch'
+          : slot.label.toLowerCase().startsWith('dinner')
+            ? 'dinner'
+            : 'snack'
+    for (const item of slot.items) {
+      addMeal({
+        date,
+        type: typeGuess,
+        name: item.name,
+        calories: item.calories,
+        proteinG: item.proteinG,
+        carbsG: item.carbsG,
+        fatG: item.fatG,
+        notes: item.notes,
+        planSlotId: slot.id,
+      })
+    }
+    const nextProtein = summarizeMeals(
+      useMealStore.getState().getMealsForDate(date)
+    ).proteinG
+    void syncProteinToChallenges(nextProtein)
   }
 
   const handleAdd = (e: React.FormEvent) => {
@@ -253,6 +334,7 @@ export default function MealsPage() {
       fatG: Number(fat) || 0,
       imageUrl: imageUrl || undefined,
       notes: aiNote || undefined,
+      planSlotId: pendingSlotId || undefined,
     })
     void import('@/lib/ai/rag/client-index').then(({ indexRagSource }) => {
       indexRagSource({
@@ -367,15 +449,27 @@ export default function MealsPage() {
             {format(new Date(), 'EEEE, MMM d')} · track today’s fuel
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => (showForm ? resetForm() : openForm())}
-          className="h-10 px-3 rounded-[14px] bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1.5 cursor-pointer active:scale-95"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Log meal
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGoals(true)}
+            className="h-10 w-10 rounded-[14px] border border-border bg-card text-muted-foreground flex items-center justify-center cursor-pointer active:scale-95"
+            aria-label="Edit daily targets"
+          >
+            <Settings2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => (showForm ? resetForm() : openForm())}
+            className="h-10 px-3 rounded-[14px] bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1.5 cursor-pointer active:scale-95"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Log meal
+          </button>
+        </div>
       </div>
+
+      <MealGoalsSheet open={showGoals} onOpenChange={setShowGoals} />
 
       <MealLogSheet
         open={showForm}
@@ -418,10 +512,37 @@ export default function MealsPage() {
         </div>
       ) : (
         <>
+          <button
+            type="button"
+            onClick={() =>
+              router.push(activeMealPlan ? `/meal-plans/${activeMealPlan.id}` : '/meal-plans')
+            }
+            className="w-full bg-card border border-border rounded-[20px] p-4 flex items-center justify-between cursor-pointer active:scale-[0.99]"
+          >
+            <div className="text-left">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Meal Plan
+              </p>
+              <p className="text-sm font-bold text-foreground mt-0.5">
+                {activeMealPlan?.name ?? 'Create a weekly meal plan'}
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-primary" />
+          </button>
+
           <section className="rounded-[24px] border border-primary/25 bg-gradient-to-br from-primary/10 via-transparent to-transparent p-4 space-y-4">
-            <div className="flex items-center gap-2 text-primary">
-              <Apple className="w-4 h-4" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Today</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-primary">
+                <Apple className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Today</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGoals(true)}
+                className="text-[10px] font-semibold text-primary cursor-pointer"
+              >
+                Edit targets
+              </button>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -464,13 +585,37 @@ export default function MealsPage() {
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-[14px] bg-background/50 border border-border px-3 py-2 text-center">
-                <p className="text-sm font-bold text-foreground tabular-nums">{totals.carbsG}g</p>
+              <div className="rounded-[14px] bg-background/50 border border-border px-3 py-2">
+                <p className="text-sm font-bold text-foreground tabular-nums">
+                  {totals.carbsG}g
+                  <span className="text-[10px] font-semibold text-muted-foreground">
+                    {' '}
+                    / {dailyCarbsGoal}
+                  </span>
+                </p>
                 <p className="text-[10px] text-muted-foreground">Carbs</p>
+                <div className="mt-1.5 h-1.5 rounded-full bg-muted/80 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-sky-500 transition-all"
+                    style={{ width: `${carbsPct}%` }}
+                  />
+                </div>
               </div>
-              <div className="rounded-[14px] bg-background/50 border border-border px-3 py-2 text-center">
-                <p className="text-sm font-bold text-foreground tabular-nums">{totals.fatG}g</p>
+              <div className="rounded-[14px] bg-background/50 border border-border px-3 py-2">
+                <p className="text-sm font-bold text-foreground tabular-nums">
+                  {totals.fatG}g
+                  <span className="text-[10px] font-semibold text-muted-foreground">
+                    {' '}
+                    / {dailyFatGoal}
+                  </span>
+                </p>
                 <p className="text-[10px] text-muted-foreground">Fat</p>
+                <div className="mt-1.5 h-1.5 rounded-full bg-muted/80 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-orange-400 transition-all"
+                    style={{ width: `${fatPct}%` }}
+                  />
+                </div>
               </div>
               <div className="rounded-[14px] bg-background/50 border border-border px-3 py-2 text-center">
                 <p className="text-sm font-bold text-foreground tabular-nums">{totals.count}</p>
@@ -478,6 +623,24 @@ export default function MealsPage() {
               </div>
             </div>
           </section>
+
+          {todayPlan ? (
+            <TodayMealPlanSlots
+              plan={todayPlan.plan}
+              day={todayPlan.day}
+              todaysMeals={todaysMeals}
+              onLogSlot={(slot, mealType) =>
+                openForm({
+                  type: mealType,
+                  slotId: slot.id,
+                  prefill: slot.items.length ? slot : undefined,
+                })
+              }
+              onLogPlanned={handleLogPlanned}
+            />
+          ) : (
+            <NoMealPlanCard />
+          )}
 
           <section className="rounded-[24px] border border-sky-500/25 bg-gradient-to-br from-sky-500/10 via-transparent to-transparent p-4 space-y-4">
             <div className="flex items-center justify-between gap-2">

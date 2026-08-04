@@ -19,6 +19,7 @@ import { useThemeStore } from '@/stores/themeStore'
 import { useTimerStore } from '@/stores/timerStore'
 import { useWorkoutStore } from '@/stores/workoutStore'
 import { todayKey, useMealStore } from '@/stores/mealStore'
+import { useMealPlanStore } from '@/stores/mealPlanStore'
 
 const HISTORY_LIMIT = 5
 const CATALOG_LIMIT = 35
@@ -147,6 +148,8 @@ export function buildAgentContext(): AgentContext {
       today: mealDate,
       dailyCalorieGoal: mealState.dailyCalorieGoal,
       dailyProteinGoal: mealState.dailyProteinGoal,
+      dailyCarbsGoal: mealState.dailyCarbsGoal,
+      dailyFatGoal: mealState.dailyFatGoal,
       dailyWaterGoalMl: mealState.dailyWaterGoalMl,
       waterTotalMl,
       todaysMeals: todaysMeals.slice(0, 12).map((m) => ({
@@ -162,6 +165,34 @@ export function buildAgentContext(): AgentContext {
         id: w.id,
         amountMl: w.amountMl,
       })),
+      activeMealPlan: (() => {
+        const todayMeal = useMealPlanStore.getState().getTodayDay()
+        if (!todayMeal) {
+          const plan = useMealPlanStore.getState().getActivePlan()
+          return plan
+            ? {
+                id: plan.id,
+                name: plan.name,
+                mealsPerDay: plan.mealsPerDay,
+                todayDayName: 'none',
+                slotCount: 0,
+                plannedItemCount: 0,
+              }
+            : null
+        }
+        const plannedItemCount = todayMeal.day.slots.reduce(
+          (n, s) => n + s.items.length,
+          0
+        )
+        return {
+          id: todayMeal.plan.id,
+          name: todayMeal.plan.name,
+          mealsPerDay: todayMeal.plan.mealsPerDay,
+          todayDayName: todayMeal.day.name,
+          slotCount: todayMeal.day.slots.length,
+          plannedItemCount,
+        }
+      })(),
     },
   }
 }

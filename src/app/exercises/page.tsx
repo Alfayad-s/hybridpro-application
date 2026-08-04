@@ -75,17 +75,17 @@ export default function ExerciseLibraryPage() {
           >
             <Layers3 className="w-4 h-4" />
           </Link>
-            <button
-              type="button"
-              onClick={() => {
-                setAiSeedName(search.trim())
-                setAiOpen(true)
-              }}
-              className="h-10 w-10 rounded-[14px] bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0 cursor-pointer active:scale-95"
-              aria-label="Create exercise with AI"
-            >
-              <Sparkles className="w-4 h-4" />
-            </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAiSeedName(search.trim())
+              setAiOpen(true)
+            }}
+            className="h-10 w-10 rounded-[14px] bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0 cursor-pointer active:scale-95"
+            aria-label="Create exercise with AI"
+          >
+            <Sparkles className="w-4 h-4" />
+          </button>
           <Link
             href="/exercises/new"
             className="h-10 px-3 rounded-[14px] bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1.5 shrink-0 active:scale-95"

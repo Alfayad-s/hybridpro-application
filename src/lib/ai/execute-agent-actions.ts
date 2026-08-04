@@ -524,6 +524,12 @@ function executeOne(
           ...(params.dailyProteinGoal != null
             ? { dailyProteinGoal: num(params.dailyProteinGoal) }
             : {}),
+          ...(params.dailyCarbsGoal != null
+            ? { dailyCarbsGoal: num(params.dailyCarbsGoal) }
+            : {}),
+          ...(params.dailyFatGoal != null
+            ? { dailyFatGoal: num(params.dailyFatGoal) }
+            : {}),
           ...(params.dailyWaterGoalMl != null
             ? { dailyWaterGoalMl: num(params.dailyWaterGoalMl) }
             : {}),

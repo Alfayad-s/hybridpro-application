@@ -86,6 +86,8 @@ export function leanContextForModel(context: AgentContext) {
           goals: {
             calories: context.meals.dailyCalorieGoal,
             proteinG: context.meals.dailyProteinGoal,
+            carbsG: context.meals.dailyCarbsGoal,
+            fatG: context.meals.dailyFatGoal,
             waterMl: context.meals.dailyWaterGoalMl,
           },
           waterTotalMl: context.meals.waterTotalMl,
@@ -97,6 +99,7 @@ export function leanContextForModel(context: AgentContext) {
             proteinG: m.proteinG,
           })),
           recentWater: context.meals.recentWater.slice(0, 4),
+          activeMealPlan: context.meals.activeMealPlan ?? null,
         }
       : undefined,
   }

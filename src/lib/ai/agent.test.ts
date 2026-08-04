@@ -74,6 +74,8 @@ function mockContext(overrides: Partial<AgentContext> = {}): AgentContext {
       today: '2026-07-20',
       dailyCalorieGoal: 2500,
       dailyProteinGoal: 160,
+      dailyCarbsGoal: 250,
+      dailyFatGoal: 70,
       dailyWaterGoalMl: 3000,
       waterTotalMl: 500,
       todaysMeals: [
@@ -88,6 +90,7 @@ function mockContext(overrides: Partial<AgentContext> = {}): AgentContext {
         },
       ],
       recentWater: [{ id: 'water-1', amountMl: 500 }],
+      activeMealPlan: null,
     },
     ...overrides,
   }

@@ -17,6 +17,8 @@ export type MealEntry = {
   fatG: number
   notes?: string
   imageUrl?: string
+  /** When logged from an active meal-plan slot */
+  planSlotId?: string
   createdAt: string
 }
 
@@ -32,6 +34,8 @@ type MealState = {
   waterLogs: WaterEntry[]
   dailyCalorieGoal: number
   dailyProteinGoal: number
+  dailyCarbsGoal: number
+  dailyFatGoal: number
   dailyWaterGoalMl: number
   addMeal: (input: Omit<MealEntry, 'id' | 'createdAt'>) => string
   updateMeal: (id: string, patch: Partial<Omit<MealEntry, 'id' | 'createdAt'>>) => void
@@ -41,6 +45,8 @@ type MealState = {
   setGoals: (goals: {
     dailyCalorieGoal?: number
     dailyProteinGoal?: number
+    dailyCarbsGoal?: number
+    dailyFatGoal?: number
     dailyWaterGoalMl?: number
   }) => void
   getMealsForDate: (date: string) => MealEntry[]
@@ -81,6 +87,8 @@ export const useMealStore = create<MealState>()(
       waterLogs: [],
       dailyCalorieGoal: 2500,
       dailyProteinGoal: 160,
+      dailyCarbsGoal: 250,
+      dailyFatGoal: 70,
       dailyWaterGoalMl: 3000,
 
       addMeal: (input) => {
@@ -95,6 +103,7 @@ export const useMealStore = create<MealState>()(
           fatG: Math.max(0, Math.round(input.fatG)),
           notes: input.notes?.trim() || undefined,
           imageUrl: input.imageUrl?.trim() || undefined,
+          planSlotId: input.planSlotId?.trim() || undefined,
           createdAt: new Date().toISOString(),
         }
         set((state) => ({ meals: [entry, ...state.meals].slice(0, 500) }))
@@ -157,6 +166,8 @@ export const useMealStore = create<MealState>()(
         set((state) => ({
           dailyCalorieGoal: goals.dailyCalorieGoal ?? state.dailyCalorieGoal,
           dailyProteinGoal: goals.dailyProteinGoal ?? state.dailyProteinGoal,
+          dailyCarbsGoal: goals.dailyCarbsGoal ?? state.dailyCarbsGoal,
+          dailyFatGoal: goals.dailyFatGoal ?? state.dailyFatGoal,
           dailyWaterGoalMl: goals.dailyWaterGoalMl ?? state.dailyWaterGoalMl,
         }))
       },
