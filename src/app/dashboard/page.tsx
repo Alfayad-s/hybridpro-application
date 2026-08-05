@@ -48,9 +48,11 @@ import {
 } from '@/stores/mealStore'
 import {
   RECOVERY_GROUPS,
-  GROUP_TO_MAP,
+  GROUP_MUSCLES,
   STATUS_COLOR,
   getGroupRecovery,
+  getMuscleRecovery,
+  muscleIdFromSlug,
   type RecoveryStatus,
 } from '@/lib/muscle-recovery'
 import {
@@ -752,21 +754,30 @@ export default function DashboardPage() {
 
   const recoveryList = useMemo(() => {
     void nowTick
-    return RECOVERY_GROUPS.map((group) =>
-      getGroupRecovery(group, lastTrained[group]?.date ?? null, Date.now())
-    )
+    return RECOVERY_GROUPS.map((group) => getGroupRecovery(group, lastTrained, Date.now()))
   }, [lastTrained, nowTick])
 
   const recoveryHighlights = useMemo(() => {
     const map: MuscleHighlights = {}
     for (const item of recoveryList) {
-      const opacity = 0.35 + (1 - item.recoveredPct) * 0.6
-      for (const muscle of GROUP_TO_MAP[item.group]) {
-        map[muscle] = { color: STATUS_COLOR[item.status], opacity }
+      for (const muscle of item.muscles) {
+        const opacity = 0.35 + (1 - muscle.recoveredPct) * 0.6
+        const def = GROUP_MUSCLES[item.group].find((m) => m.id === muscle.id)
+        for (const slug of def?.mapSlugs ?? [muscle.id]) {
+          map[slug] = { color: STATUS_COLOR[muscle.status], opacity }
+        }
       }
     }
     return map
   }, [recoveryList])
+
+  const selectedMuscleRecovery = useMemo(() => {
+    if (!selectedMuscleSlug) return null
+    const id = muscleIdFromSlug(selectedMuscleSlug)
+    if (!id) return null
+    const record = lastTrained[id]
+    return getMuscleRecovery(id, record?.date ?? null, record?.volumeKg ?? 0, Date.now())
+  }, [selectedMuscleSlug, lastTrained, nowTick])
 
   const startFromPlanDay = (day: PlanDay | null, nameSuffix?: string) => {
     const session = useWorkoutStore.getState().activeSession
@@ -1506,9 +1517,28 @@ export default function DashboardPage() {
             </ZoomableAnatomy>
           </div>
 
-          {selectedMuscle && (
+          {selectedMuscleRecovery ? (
+            <div className="rounded-[16px] border border-border bg-card/80 px-3.5 py-2.5 space-y-1.5 text-center">
+              <p className="text-xs font-bold text-foreground">
+                {selectedMuscleRecovery.label}
+                <span className="text-muted-foreground font-medium">
+                  {' '}
+                  · {selectedMuscleRecovery.group}
+                </span>
+              </p>
+              <div className="flex items-center justify-center gap-3 text-[11px]">
+                <span className={`font-bold ${statusStyles[selectedMuscleRecovery.status]}`}>
+                  {selectedMuscleRecovery.status}
+                </span>
+                <span className="font-semibold text-foreground tabular-nums">
+                  {Math.round(selectedMuscleRecovery.recoveredPct * 100)}%
+                </span>
+                <span className="text-muted-foreground">{selectedMuscleRecovery.labelStatus}</span>
+              </div>
+            </div>
+          ) : selectedMuscle ? (
             <p className="text-center text-xs text-muted-foreground">{selectedMuscle}</p>
-          )}
+          ) : null}
 
           <div className="flex items-center justify-center gap-4 text-[10px] font-medium">
             <span className="flex items-center gap-1.5 text-primary">
@@ -1526,9 +1556,11 @@ export default function DashboardPage() {
             {recoveryList.map((item) => {
               const pct = Math.round(item.recoveredPct * 100)
               return (
-                <div
+                <button
                   key={item.group}
-                  className="flex flex-col items-center gap-1.5 text-center"
+                  type="button"
+                  onClick={() => router.push('/recovery')}
+                  className="flex flex-col items-center gap-1.5 text-center cursor-pointer active:scale-95"
                 >
                   <RecoveryRing percent={pct} color={STATUS_COLOR[item.status]} />
                   <span className="text-[11px] font-semibold text-foreground leading-tight">
@@ -1537,7 +1569,7 @@ export default function DashboardPage() {
                   <span className={`text-[9px] font-bold ${statusStyles[item.status]}`}>
                     {item.status}
                   </span>
-                </div>
+                </button>
               )
             })}
           </div>

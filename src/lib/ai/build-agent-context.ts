@@ -45,11 +45,17 @@ export function buildAgentContext(): AgentContext {
   const catalog = getAllExercises(customExercises).slice(0, CATALOG_LIMIT)
 
   const recoveries = RECOVERY_GROUPS.map((group) => {
-    const r = getGroupRecovery(group, recovery[group]?.date ?? null)
+    const r = getGroupRecovery(group, recovery)
     return {
       group: r.group,
       status: r.status,
       progress: Math.round(r.recoveredPct * 100),
+      muscles: r.muscles.map((m) => ({
+        id: m.id,
+        label: m.label,
+        status: m.status,
+        progress: Math.round(m.recoveredPct * 100),
+      })),
     }
   })
 

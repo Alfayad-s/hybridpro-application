@@ -13,7 +13,10 @@ import {
 import { useTimerStore } from '@/stores/timerStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useRecoveryStore } from '@/stores/recoveryStore'
-import { recoveryGroupsForExercise, type RecoveryGroup } from '@/lib/muscle-recovery'
+import {
+  recoveryMusclesForExercise,
+  type RecoveryMuscleId,
+} from '@/lib/muscle-recovery'
 import { WeightPicker } from '@/components/workout/WeightPicker'
 import { RepPicker } from '@/components/workout/RepPicker'
 import { WorkoutRestCircle } from '@/components/workout/WorkoutRestCircle'
@@ -338,16 +341,19 @@ export default function WorkoutPage() {
           })
         })
 
-        const volumeByGroup = new Map<RecoveryGroup, number>()
+        const volumeByMuscle = new Map<RecoveryMuscleId, number>()
         for (const ex of result.exercises) {
-          const groups = recoveryGroupsForExercise(ex.exerciseId, ex.name)
-          for (const group of groups) {
-            volumeByGroup.set(group, (volumeByGroup.get(group) ?? 0) + ex.volumeKg)
+          const muscles = recoveryMusclesForExercise(ex.exerciseId, ex.name)
+          for (const muscle of muscles) {
+            volumeByMuscle.set(muscle, (volumeByMuscle.get(muscle) ?? 0) + ex.volumeKg)
           }
         }
-        if (volumeByGroup.size > 0) {
+        if (volumeByMuscle.size > 0) {
           recordSession(
-            [...volumeByGroup.entries()].map(([group, volumeKg]) => ({ group, volumeKg })),
+            [...volumeByMuscle.entries()].map(([muscle, volumeKg]) => ({
+              muscle,
+              volumeKg,
+            })),
             result.completedAt
           )
         }

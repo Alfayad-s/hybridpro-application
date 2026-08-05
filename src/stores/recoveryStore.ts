@@ -4,7 +4,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
   buildRecoveryFromWorkouts,
-  type RecoveryGroup,
+  type MuscleRecoveryMap,
+  type RecoveryMuscleId,
 } from '@/lib/muscle-recovery'
 import type { CompletedWorkout } from '@/stores/historyStore'
 
@@ -14,9 +15,10 @@ export type MuscleTrainingRecord = {
 }
 
 type RecoveryState = {
-  lastTrained: Partial<Record<RecoveryGroup, MuscleTrainingRecord>>
+  /** Fine-grained last-trained map keyed by RecoveryMuscleId (and legacy group keys). */
+  lastTrained: MuscleRecoveryMap
   recordSession: (
-    groups: { group: RecoveryGroup; volumeKg: number }[],
+    muscles: { muscle: RecoveryMuscleId; volumeKg: number }[],
     date?: string
   ) => void
   /** Rebuild recovery map from workout history (clears fatigue when history is empty). */
@@ -29,13 +31,13 @@ export const useRecoveryStore = create<RecoveryState>()(
     (set) => ({
       lastTrained: {},
 
-      recordSession: (groups, date) =>
+      recordSession: (muscles, date) =>
         set((state) => {
-          if (groups.length === 0) return {}
+          if (muscles.length === 0) return {}
           const when = date ?? new Date().toISOString()
           const next = { ...state.lastTrained }
-          for (const { group, volumeKg } of groups) {
-            next[group] = { date: when, volumeKg }
+          for (const { muscle, volumeKg } of muscles) {
+            next[muscle] = { date: when, volumeKg }
           }
           return { lastTrained: next }
         }),
@@ -45,6 +47,10 @@ export const useRecoveryStore = create<RecoveryState>()(
 
       reset: () => set({ lastTrained: {} }),
     }),
-    { name: 'gymtrack-recovery' }
+    {
+      name: 'gymtrack-recovery',
+      version: 2,
+      migrate: () => ({ lastTrained: {} }),
+    }
   )
 )

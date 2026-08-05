@@ -502,7 +502,12 @@ export type AgentContext = {
     goalWeight: number | null
     recentBodyWeight: Array<{ id: string; date: string; weight: number }>
   }
-  recovery: Array<{ group: string; status: string; progress: number }>
+  recovery: Array<{
+    group: string
+    status: string
+    progress: number
+    muscles?: Array<{ id: string; label: string; status: string; progress: number }>
+  }>
   customExercises: Array<{
     id: string
     name: string

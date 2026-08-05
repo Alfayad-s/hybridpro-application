@@ -34,7 +34,7 @@ export function useChallengeContext(): ChallengeGeneratorInput {
       null
 
     const scores = RECOVERY_GROUPS.map(
-      (g) => getGroupRecovery(g, lastTrained[g]?.date ?? null, Date.now()).recoveredPct * 100
+      (g) => getGroupRecovery(g, lastTrained, Date.now()).recoveredPct * 100
     )
     const recoveryScore = scores.length
       ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)

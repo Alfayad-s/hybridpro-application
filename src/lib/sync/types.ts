@@ -4,7 +4,7 @@ import type { ActiveSession } from '@/stores/workoutStore'
 import type { BodyWeightEntry } from '@/stores/progressStore'
 import type { CustomMuscleGroup } from '@/stores/muscleGroupStore'
 import type { CatalogExercise } from '@/data/exercises'
-import type { RecoveryGroup } from '@/lib/muscle-recovery'
+import type { MuscleRecoveryMap } from '@/lib/muscle-recovery'
 
 export const SYNC_VERSION = 1 as const
 
@@ -37,9 +37,7 @@ export type UserSyncPayload = {
       goalWeight: number | null
     }>
     recovery: SyncStoreSlice<{
-      lastTrained: Partial<
-        Record<RecoveryGroup, { date: string; volumeKg: number }>
-      >
+      lastTrained: MuscleRecoveryMap
     }>
     customExercises: SyncStoreSlice<CatalogExercise[]>
     muscleGroups: SyncStoreSlice<CustomMuscleGroup[]>

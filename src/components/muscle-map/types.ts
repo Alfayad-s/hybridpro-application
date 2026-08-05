@@ -92,7 +92,7 @@ export const MUSCLE_LABELS: Record<string, string> = {
   biceps: 'Biceps',
   calves: 'Calves',
   chest: 'Chest',
-  deltoids: 'Shoulders',
+  deltoids: 'Side Delts',
   feet: 'Feet',
   forearm: 'Forearms',
   gluteal: 'Glutes',

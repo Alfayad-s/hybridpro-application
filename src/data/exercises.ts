@@ -82,8 +82,8 @@ export const MUSCLE_GROUP_DEFAULTS: Record<
   { target: string; view: 'front' | 'back'; primary: MuscleId[]; secondary: MuscleId[] }
 > = {
   Chest: { target: 'Chest', view: 'front', primary: ['chest'], secondary: ['front-deltoid', 'triceps'] },
-  Back: { target: 'Back', view: 'back', primary: ['upper-back', 'lower-back'], secondary: ['biceps', 'rhomboids'] },
-  Shoulders: { target: 'Shoulders', view: 'front', primary: ['deltoids', 'front-deltoid'], secondary: ['triceps'] },
+  Back: { target: 'Back', view: 'back', primary: ['upper-back'], secondary: ['biceps', 'rhomboids', 'rear-deltoid'] },
+  Shoulders: { target: 'Side Delts', view: 'front', primary: ['deltoids'], secondary: ['front-deltoid', 'triceps'] },
   Arms: { target: 'Biceps', view: 'front', primary: ['biceps'], secondary: ['forearm'] },
   Legs: { target: 'Quads', view: 'front', primary: ['quadriceps'], secondary: ['gluteal', 'hamstring'] },
   Core: { target: 'Abs', view: 'front', primary: ['abs'], secondary: ['obliques'] },
@@ -95,7 +95,42 @@ const FOREARM_ANATOMY = {
   target: 'Forearms',
   view: 'front' as const,
   primary: ['forearm'] as MuscleId[],
-  secondary: ['biceps', 'hands'] as MuscleId[],
+  secondary: ['biceps'] as MuscleId[],
+}
+
+const TRICEPS_ANATOMY = {
+  target: 'Triceps',
+  view: 'front' as const,
+  primary: ['triceps'] as MuscleId[],
+  secondary: ['forearm'] as MuscleId[],
+}
+
+const BICEPS_ANATOMY = {
+  target: 'Biceps',
+  view: 'front' as const,
+  primary: ['biceps'] as MuscleId[],
+  secondary: ['forearm'] as MuscleId[],
+}
+
+const FRONT_DELT_ANATOMY = {
+  target: 'Front Delts',
+  view: 'front' as const,
+  primary: ['front-deltoid'] as MuscleId[],
+  secondary: ['deltoids', 'triceps'] as MuscleId[],
+}
+
+const SIDE_DELT_ANATOMY = {
+  target: 'Side Delts',
+  view: 'front' as const,
+  primary: ['deltoids'] as MuscleId[],
+  secondary: ['trapezius'] as MuscleId[],
+}
+
+const REAR_DELT_ANATOMY = {
+  target: 'Rear Delts',
+  view: 'back' as const,
+  primary: ['rear-deltoid'] as MuscleId[],
+  secondary: ['rhomboids', 'trapezius'] as MuscleId[],
 }
 
 export function getMuscleGroupDefaults(group: string) {
@@ -109,32 +144,130 @@ export function getMuscleGroupDefaults(group: string) {
   )
 }
 
-export function anatomyDefaultsForExercise(name: string, muscleGroup: string, anatomyBaseGroup?: string) {
-  const n = name.toLowerCase()
+/**
+ * Pick anatomy from exercise name / target so Arms & Shoulders land on
+ * biceps / triceps / forearms / front-side-rear delts — not the whole group.
+ */
+export function anatomyDefaultsForExercise(
+  name: string,
+  muscleGroup: string,
+  anatomyBaseGroup?: string,
+  target?: string
+) {
+  const n = `${name} ${target ?? ''}`.toLowerCase()
+
   if (/wrist|forearm|grip|pinch|farmer|roller|wrist.?curl/.test(n)) {
     return FOREARM_ANATOMY
   }
+  if (/tricep|pushdown|skull|close.?grip.?bench|dip(?!.*chest)/.test(n)) {
+    return TRICEPS_ANATOMY
+  }
+  if (/bicep|curl(?!.*leg)|chin.?up/.test(n)) {
+    return BICEPS_ANATOMY
+  }
+  if (/face.?pull|rear.?delt|reverse.?fly|bent.?over.?raise/.test(n)) {
+    return REAR_DELT_ANATOMY
+  }
+  if (/lateral.?raise|side.?delt|side.?raise/.test(n)) {
+    return SIDE_DELT_ANATOMY
+  }
+  if (/front.?delt|overhead.?press|military.?press|arnold|shoulder.?press/.test(n)) {
+    return FRONT_DELT_ANATOMY
+  }
+  if (/upper.?chest|incline/.test(n)) {
+    return {
+      target: 'Upper Chest',
+      view: 'front' as const,
+      primary: ['upper-chest', 'chest'] as MuscleId[],
+      secondary: ['front-deltoid', 'triceps'] as MuscleId[],
+    }
+  }
+  if (/lower.?chest|decline|chest.?dip/.test(n)) {
+    return {
+      target: 'Lower Chest',
+      view: 'front' as const,
+      primary: ['lower-chest', 'chest'] as MuscleId[],
+      secondary: ['triceps', 'front-deltoid'] as MuscleId[],
+    }
+  }
+  if (/hamstring|leg.?curl|romanian|rdl/.test(n)) {
+    return {
+      target: 'Hamstrings',
+      view: 'back' as const,
+      primary: ['hamstring'] as MuscleId[],
+      secondary: ['gluteal'] as MuscleId[],
+    }
+  }
+  if (/calf/.test(n)) {
+    return {
+      target: 'Calves',
+      view: 'back' as const,
+      primary: ['calves'] as MuscleId[],
+      secondary: [] as MuscleId[],
+    }
+  }
+  if (/glute|hip.?thrust|kickback/.test(n)) {
+    return {
+      target: 'Glutes',
+      view: 'back' as const,
+      primary: ['gluteal'] as MuscleId[],
+      secondary: ['hamstring'] as MuscleId[],
+    }
+  }
+  if (/oblique|russian.?twist|wood.?chop/.test(n)) {
+    return {
+      target: 'Obliques',
+      view: 'front' as const,
+      primary: ['obliques'] as MuscleId[],
+      secondary: ['abs'] as MuscleId[],
+    }
+  }
+
   return getMuscleGroupDefaults(anatomyBaseGroup ?? muscleGroup)
 }
 
-/** Repair outdated custom-exercise anatomy (e.g. forearm moves zoomed on torso). */
+/** Repair outdated custom-exercise anatomy using name/target heuristics. */
 export function withNormalizedAnatomy(ex: CatalogExercise): CatalogExercise {
-  const defaults = anatomyDefaultsForExercise(ex.name, ex.muscleGroup)
-  const wantsForearm = defaults.primary.includes('forearm')
-  const hasForearm = ex.anatomy.primary.includes('forearm')
-  const groupIsForearm = /forearm/i.test(ex.muscleGroup)
+  const defaults = anatomyDefaultsForExercise(ex.name, ex.muscleGroup, undefined, ex.target)
+  const groupDefaults = getMuscleGroupDefaults(ex.muscleGroup)
 
-  if (!wantsForearm && !groupIsForearm) return ex
-  if (wantsForearm && hasForearm) return ex
+  // Already has a specific primary that isn't just the coarse group default — keep it
+  // unless forearm/target heuristics clearly disagree.
+  const wantsSpecific =
+    defaults.primary.join() !== groupDefaults.primary.join() ||
+    defaults.target !== groupDefaults.target
 
-  const next = groupIsForearm && !wantsForearm ? getMuscleGroupDefaults(ex.muscleGroup) : defaults
+  if (!wantsSpecific) return ex
+
+  const alreadyMatches =
+    ex.anatomy.primary.join() === defaults.primary.join() &&
+    ex.target === defaults.target
+
+  if (alreadyMatches) return ex
+
+  // Only rewrite when the stored anatomy still looks like a coarse group default
+  // or clearly wrong for the name (e.g. Arms → biceps for a tricep move).
+  const looksCoarse =
+    ex.anatomy.primary.join() === groupDefaults.primary.join() ||
+    (ex.muscleGroup === 'Arms' &&
+      /tricep/i.test(`${ex.name} ${ex.target}`) &&
+      ex.anatomy.primary.includes('biceps')) ||
+    (ex.muscleGroup === 'Shoulders' &&
+      /rear|face.?pull|lateral|side/i.test(`${ex.name} ${ex.target}`) &&
+      ex.anatomy.primary.includes('front-deltoid') &&
+      !/front/i.test(`${ex.name} ${ex.target}`)) ||
+    (/forearm|wrist|grip/i.test(`${ex.name} ${ex.muscleGroup}`) &&
+      !ex.anatomy.primary.includes('forearm'))
+
+  if (!looksCoarse) return ex
+
   return {
     ...ex,
-    target: ex.target === 'Biceps' || ex.target === 'Back' || ex.target === 'Full Body' ? next.target : ex.target,
+    target: defaults.target,
     anatomy: {
-      view: next.view,
-      primary: [...next.primary],
-      secondary: [...next.secondary],
+      view: defaults.view,
+      primary: [...defaults.primary],
+      secondary: [...defaults.secondary],
     },
   }
 }
@@ -337,8 +470,8 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ],
     anatomy: {
       view: 'back',
-      primary: ['lower-back', 'gluteal'],
-      secondary: ['hamstring', 'trapezius', 'upper-back'],
+      primary: ['lower-back', 'trapezius', 'upper-back'],
+      secondary: ['gluteal', 'hamstring'],
     },
   },
   {
@@ -359,7 +492,7 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     anatomy: {
       view: 'back',
       primary: ['upper-back'],
-      secondary: ['trapezius', 'rear-deltoid'],
+      secondary: ['biceps', 'rear-deltoid', 'trapezius'],
     },
   },
   {
@@ -380,7 +513,7 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     anatomy: {
       view: 'back',
       primary: ['upper-back'],
-      secondary: ['trapezius'],
+      secondary: ['biceps', 'rear-deltoid'],
     },
   },
   {
@@ -400,8 +533,8 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ],
     anatomy: {
       view: 'back',
-      primary: ['upper-back'],
-      secondary: ['trapezius', 'rear-deltoid'],
+      primary: ['upper-back', 'rhomboids'],
+      secondary: ['biceps', 'rear-deltoid', 'trapezius'],
     },
   },
   {
@@ -421,10 +554,11 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ],
     anatomy: {
       view: 'back',
-      primary: ['upper-back'],
-      secondary: ['trapezius'],
+      primary: ['upper-back', 'rhomboids'],
+      secondary: ['biceps', 'rear-deltoid'],
     },
-  },  {
+  },
+  {
     id: 'face-pulls',
     name: 'Face Pulls',
     muscleGroup: 'Shoulders',
@@ -441,7 +575,7 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ],
     anatomy: {
       view: 'back',
-      primary: ['rear-deltoid', 'deltoids'],
+      primary: ['rear-deltoid'],
       secondary: ['trapezius', 'rhomboids'],
     },
   },
@@ -464,8 +598,8 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ],
     anatomy: {
       view: 'front',
-      primary: ['front-deltoid', 'deltoids'],
-      secondary: ['triceps', 'trapezius'],
+      primary: ['front-deltoid'],
+      secondary: ['deltoids', 'triceps', 'trapezius'],
     },
   },
   {
@@ -485,7 +619,7 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ],
     anatomy: {
       view: 'front',
-      primary: ['deltoids', 'front-deltoid'],
+      primary: ['deltoids'],
       secondary: ['trapezius'],
     },
   },
@@ -506,7 +640,7 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ],
     anatomy: {
       view: 'back',
-      primary: ['rear-deltoid', 'deltoids'],
+      primary: ['rear-deltoid'],
       secondary: ['rhomboids', 'trapezius'],
     },
   },
@@ -527,8 +661,8 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ],
     anatomy: {
       view: 'front',
-      primary: ['front-deltoid', 'deltoids'],
-      secondary: ['triceps'],
+      primary: ['front-deltoid'],
+      secondary: ['deltoids', 'triceps'],
     },
   },
 
@@ -571,8 +705,8 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ],
     anatomy: {
       view: 'front',
-      primary: ['biceps'],
-      secondary: ['forearm'],
+      primary: ['biceps', 'forearm'],
+      secondary: [],
     },
   },
   {
@@ -636,6 +770,27 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
       view: 'front',
       primary: ['triceps'],
       secondary: ['front-deltoid'],
+    },
+  },
+  {
+    id: 'wrist-curls',
+    name: 'Dumbbell Wrist Curl',
+    muscleGroup: 'Arms',
+    target: 'Forearms',
+    secondary: [],
+    equipment: 'Dumbbells',
+    difficulty: 'beginner',
+    imageUrl: img('photo-1581009146145-b5ef050c2e1e'),
+    instructions: [
+      'Sit and rest forearms on thighs with wrists hanging past the knees.',
+      'Hold dumbbells palms-up and curl wrists upward.',
+      'Squeeze forearms at the top.',
+      'Lower into a full stretch under control.',
+    ],
+    anatomy: {
+      view: 'front',
+      primary: ['forearm'],
+      secondary: [],
     },
   },
 
@@ -949,7 +1104,8 @@ export function buildCustomExercise(input: CreateExerciseInput, id?: string): Ca
   const defaults = anatomyDefaultsForExercise(
     input.name,
     input.muscleGroup,
-    input.anatomyBaseGroup
+    input.anatomyBaseGroup,
+    input.target
   )
   const secondaryLabels = (input.secondary ?? [])
     .map((s) => s.trim())

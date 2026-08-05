@@ -2,7 +2,7 @@
 
 import { getAllExercises, getExerciseById } from '@/data/exercises'
 import { findExistingExerciseName, type AgentAction, type AgentActionName } from '@/lib/ai/agent-types'
-import { recoveryGroupsForExercise } from '@/lib/muscle-recovery'
+import { recoveryMusclesForExercise, type RecoveryMuscleId } from '@/lib/muscle-recovery'
 import { useExerciseStore } from '@/stores/exerciseStore'
 import { useHistoryStore } from '@/stores/historyStore'
 import { useMuscleGroupStore } from '@/stores/muscleGroupStore'
@@ -199,17 +199,17 @@ function executeOne(
               },
             })
           })
-          const volumeByGroup = new Map<string, number>()
+          const volumeByMuscle = new Map<RecoveryMuscleId, number>()
           for (const ex of result.exercises) {
-            const groups = recoveryGroupsForExercise(ex.exerciseId, ex.name)
-            for (const group of groups) {
-              volumeByGroup.set(group, (volumeByGroup.get(group) ?? 0) + ex.volumeKg)
+            const muscles = recoveryMusclesForExercise(ex.exerciseId, ex.name)
+            for (const muscle of muscles) {
+              volumeByMuscle.set(muscle, (volumeByMuscle.get(muscle) ?? 0) + ex.volumeKg)
             }
           }
-          if (volumeByGroup.size > 0) {
+          if (volumeByMuscle.size > 0) {
             useRecoveryStore.getState().recordSession(
-              [...volumeByGroup.entries()].map(([group, volumeKg]) => ({
-                group: group as 'Chest' | 'Back' | 'Legs' | 'Shoulders' | 'Arms' | 'Core',
+              [...volumeByMuscle.entries()].map(([muscle, volumeKg]) => ({
+                muscle,
                 volumeKg,
               })),
               result.completedAt

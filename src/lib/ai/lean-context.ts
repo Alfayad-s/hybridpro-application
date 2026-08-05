@@ -27,7 +27,15 @@ export function leanContextForModel(context: AgentContext) {
     profile: context.profile,
     settings: context.settings,
     restTimer: context.restTimer,
-    recovery: context.recovery,
+    recovery: context.recovery.map((r) => ({
+      group: r.group,
+      status: r.status,
+      progress: r.progress,
+      // Keep only fatigued/recovering detail muscles to save tokens
+      muscles: (r.muscles ?? [])
+        .filter((m) => m.status !== 'Ready')
+        .map((m) => ({ label: m.label, status: m.status, progress: m.progress })),
+    })),
     progress: {
       goalWeight: context.progress.goalWeight,
       recentBodyWeight: context.progress.recentBodyWeight.slice(0, 3),
