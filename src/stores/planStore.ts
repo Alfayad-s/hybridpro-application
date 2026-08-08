@@ -79,6 +79,15 @@ type PlanState = {
     fields: Partial<Pick<PlanDay, 'name' | 'muscleFocus' | 'dayOfWeek' | 'isRestDay'>>
   ) => void
   deleteDay: (planId: string, dayId: string) => void
+  /** Ensure Mon–Sun slots exist as empty placeholders when missing. */
+  ensureWeekdaySlots: (planId: string) => void
+  /**
+   * Move/swap workout content between two days.
+   * Weekday identity (dayOfWeek + Monday…Sunday name) stays on each slot.
+   */
+  swapDayWorkouts: (planId: string, fromDayId: string, toDayId: string) => void
+  /** Clear a weekday slot back to empty placeholder, or delete a custom day. */
+  clearOrRemoveDay: (planId: string, dayId: string) => void
   reorderDays: (planId: string, dayIds: string[]) => void
   addExerciseToDay: (input: AddExerciseInput) => string
   updateDayExercise: (
@@ -274,6 +283,56 @@ function mapPlan(
   return plans.map((p) => (p.id === planId ? { ...updater(p), updatedAt: nowIso() } : p))
 }
 
+function emptyWeekdaySlot(dayOfWeek: number, order: number): PlanDay {
+  return {
+    id: uid(),
+    name: WEEKDAY_LABELS[dayOfWeek - 1],
+    muscleFocus: '',
+    dayOfWeek,
+    order,
+    exercises: [],
+    isRestDay: false,
+  }
+}
+
+/** Keep Mon–Sun labels on weekday slots; swap only the workout payload. */
+function workoutPayload(day: PlanDay) {
+  return {
+    muscleFocus: day.muscleFocus,
+    exercises: day.exercises.map((ex) => ({
+      ...ex,
+      secondaryMuscles: [...(ex.secondaryMuscles ?? [])],
+    })),
+    isRestDay: Boolean(day.isRestDay),
+  }
+}
+
+function withWeekdayIdentity(day: PlanDay, payload: ReturnType<typeof workoutPayload>): PlanDay {
+  const name =
+    day.dayOfWeek != null
+      ? WEEKDAY_LABELS[day.dayOfWeek - 1]
+      : payload.isRestDay
+        ? 'Rest Day'
+        : day.name
+  return {
+    ...day,
+    name,
+    muscleFocus: payload.isRestDay && day.dayOfWeek != null ? 'Rest' : payload.muscleFocus,
+    exercises: payload.exercises,
+    isRestDay: payload.isRestDay,
+  }
+}
+
+function sortPlanDays(days: PlanDay[]): PlanDay[] {
+  const weekdays = days
+    .filter((d) => d.dayOfWeek != null)
+    .sort((a, b) => (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0))
+  const customs = days
+    .filter((d) => d.dayOfWeek == null)
+    .sort((a, b) => a.order - b.order)
+  return [...weekdays, ...customs].map((d, i) => ({ ...d, order: i }))
+}
+
 export const usePlanStore = create<PlanState>()(
   persist(
     (set, get) => ({
@@ -367,10 +426,103 @@ export const usePlanStore = create<PlanState>()(
         set((state) => ({
           plans: mapPlan(state.plans, planId, (plan) => ({
             ...plan,
-            days: plan.days
-              .filter((d) => d.id !== dayId)
-              .map((d, i) => ({ ...d, order: i })),
+            days: sortPlanDays(plan.days.filter((d) => d.id !== dayId)),
           })),
+        })),
+
+      ensureWeekdaySlots: (planId) =>
+        set((state) => {
+          const plan = state.plans.find((p) => p.id === planId)
+          if (!plan) return {}
+
+          const have = new Set(
+            plan.days
+              .map((d) => d.dayOfWeek)
+              .filter((d): d is number => typeof d === 'number' && d >= 1 && d <= 7)
+          )
+          const missing: PlanDay[] = []
+          for (let dow = 1; dow <= 7; dow++) {
+            if (!have.has(dow)) missing.push(emptyWeekdaySlot(dow, dow - 1))
+          }
+
+          const withNames = plan.days.map((d) =>
+            d.dayOfWeek != null
+              ? {
+                  ...d,
+                  name: WEEKDAY_LABELS[d.dayOfWeek - 1],
+                }
+              : d
+          )
+          const sorted = sortPlanDays([...withNames, ...missing])
+          const unchanged =
+            missing.length === 0 &&
+            sorted.length === plan.days.length &&
+            sorted.every(
+              (d, i) =>
+                d.id === plan.days[i]?.id &&
+                d.order === plan.days[i]?.order &&
+                d.name === plan.days[i]?.name
+            )
+          if (unchanged) return {}
+
+          return {
+            plans: state.plans.map((p) =>
+              p.id === planId ? { ...p, days: sorted, updatedAt: nowIso() } : p
+            ),
+          }
+        }),
+
+      swapDayWorkouts: (planId, fromDayId, toDayId) => {
+        if (fromDayId === toDayId) return
+        set((state) => ({
+          plans: mapPlan(state.plans, planId, (plan) => {
+            const from = plan.days.find((d) => d.id === fromDayId)
+            const to = plan.days.find((d) => d.id === toDayId)
+            if (!from || !to) return plan
+            const fromPayload = workoutPayload(from)
+            const toPayload = workoutPayload(to)
+            return {
+              ...plan,
+              days: sortPlanDays(
+                plan.days.map((d) => {
+                  if (d.id === fromDayId) return withWeekdayIdentity(d, toPayload)
+                  if (d.id === toDayId) return withWeekdayIdentity(d, fromPayload)
+                  return d
+                })
+              ),
+            }
+          }),
+        }))
+      },
+
+      clearOrRemoveDay: (planId, dayId) =>
+        set((state) => ({
+          plans: mapPlan(state.plans, planId, (plan) => {
+            const day = plan.days.find((d) => d.id === dayId)
+            if (!day) return plan
+            if (day.dayOfWeek != null) {
+              return {
+                ...plan,
+                days: sortPlanDays(
+                  plan.days.map((d) =>
+                    d.id === dayId
+                      ? {
+                          ...d,
+                          name: WEEKDAY_LABELS[d.dayOfWeek! - 1],
+                          muscleFocus: '',
+                          exercises: [],
+                          isRestDay: false,
+                        }
+                      : d
+                  )
+                ),
+              }
+            }
+            return {
+              ...plan,
+              days: sortPlanDays(plan.days.filter((d) => d.id !== dayId)),
+            }
+          }),
         })),
 
       reorderDays: (planId, dayIds) =>

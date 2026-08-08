@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
   DndContext,
@@ -29,26 +29,18 @@ import {
 import { usePlanStore, type PlanDay } from '@/stores/planStore'
 import { WEEKDAY_LABELS } from '@/data/exercises'
 import { RepeatDayModal } from '@/components/plans/RepeatDayModal'
-import { reorderIds, useLongPressSortableSensors } from '@/lib/dnd'
-
-function weekdayBadgeLabel(day: PlanDay): string | null {
-  if (!day.dayOfWeek) return null
-  const label = WEEKDAY_LABELS[day.dayOfWeek - 1]
-  if (!label) return null
-  if (day.name.trim().toLowerCase() === label.toLowerCase()) return null
-  return label.slice(0, 3)
-}
+import { useLongPressSortableSensors } from '@/lib/dnd'
 
 function daySubtitle(day: PlanDay): string {
   if (day.isRestDay) return 'Recovery · no training'
   if (day.muscleFocus.trim()) return day.muscleFocus
-  if (day.exercises.length === 0) return 'Tap to add exercises'
+  if (day.exercises.length === 0) return 'Empty placeholder · tap to add'
   return 'No muscle focus'
 }
 
 function dayMeta(day: PlanDay): string {
   if (day.isRestDay) return 'Rest day'
-  if (day.exercises.length === 0) return 'Empty day'
+  if (day.exercises.length === 0) return 'Drag a workout here or tap to fill'
   const preview = day.exercises
     .slice(0, 2)
     .map((e) => e.name)
@@ -82,20 +74,24 @@ function DayCardBody({
   onUnmarkRest,
   onRemove,
 }: DayCardBodyProps) {
-  const badge = weekdayBadgeLabel(day)
   const empty = !day.isRestDay && day.exercises.length === 0
+  const isWeekday = day.dayOfWeek != null
 
   return (
     <div
-      className={`bg-card border rounded-[20px] overflow-hidden ${
-        day.isRestDay ? 'border-sky-500/30' : 'border-border'
+      className={`bg-card overflow-hidden rounded-[20px] border ${
+        day.isRestDay
+          ? 'border-sky-500/30'
+          : empty
+            ? 'border-dashed border-border/80 bg-muted/20'
+            : 'border-border'
       } ${isDragging ? 'opacity-40' : ''}`}
     >
       <div className={`flex items-stretch ${empty ? 'min-h-[56px]' : ''}`}>
         <button
           type="button"
           className="shrink-0 px-2.5 flex items-center text-muted-foreground touch-none cursor-grab active:cursor-grabbing"
-          aria-label="Hold to reorder"
+          aria-label="Hold to move workout to another day"
           {...dragHandleProps}
         >
           <GripVertical className="w-4 h-4" />
@@ -112,28 +108,26 @@ function DayCardBody({
             <div className="min-w-0 space-y-0.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm font-bold text-foreground">{day.name}</h3>
-                {badge && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                    {badge}
-                  </span>
-                )}
                 {day.isRestDay && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 border border-sky-500/25 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-sky-500">
                     <Coffee className="w-3 h-3" />
                     Rest
                   </span>
                 )}
+                {empty && (
+                  <span className="rounded-full bg-muted border border-border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Placeholder
+                  </span>
+                )}
               </div>
               <p
                 className={`text-xs font-semibold ${
-                  empty && !day.muscleFocus ? 'text-muted-foreground' : 'text-primary'
+                  empty ? 'text-muted-foreground' : 'text-primary'
                 }`}
               >
                 {daySubtitle(day)}
               </p>
-              {!empty && (
-                <p className="text-[11px] text-muted-foreground">{dayMeta(day)}</p>
-              )}
+              {!empty && <p className="text-[11px] text-muted-foreground">{dayMeta(day)}</p>}
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
           </div>
@@ -141,7 +135,7 @@ function DayCardBody({
       </div>
 
       <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap border-t border-border/40 pt-2">
-        {canRepeat && (
+        {canRepeat && !empty && (
           <button
             type="button"
             onClick={onRepeat}
@@ -173,9 +167,10 @@ function DayCardBody({
         <button
           type="button"
           onClick={onRemove}
-          className="h-7 px-2.5 ml-auto text-[10px] font-semibold text-destructive cursor-pointer"
+          disabled={isWeekday && empty}
+          className="h-7 px-2.5 ml-auto text-[10px] font-semibold text-destructive cursor-pointer disabled:opacity-30 disabled:cursor-default"
         >
-          Remove
+          {isWeekday ? 'Clear' : 'Remove'}
         </button>
       </div>
     </div>
@@ -238,8 +233,9 @@ export default function PlanDetailPage() {
   const updatePlan = usePlanStore((s) => s.updatePlan)
   const addDay = usePlanStore((s) => s.addDay)
   const updateDay = usePlanStore((s) => s.updateDay)
-  const deleteDay = usePlanStore((s) => s.deleteDay)
-  const reorderDays = usePlanStore((s) => s.reorderDays)
+  const ensureWeekdaySlots = usePlanStore((s) => s.ensureWeekdaySlots)
+  const swapDayWorkouts = usePlanStore((s) => s.swapDayWorkouts)
+  const clearOrRemoveDay = usePlanStore((s) => s.clearOrRemoveDay)
   const deletePlan = usePlanStore((s) => s.deletePlan)
   const repeatDayToDays = usePlanStore((s) => s.repeatDayToDays)
 
@@ -255,10 +251,21 @@ export default function PlanDetailPage() {
 
   const sensors = useLongPressSortableSensors()
 
-  const sortedDays = useMemo(
-    () => (plan ? [...plan.days].sort((a, b) => a.order - b.order) : []),
-    [plan]
-  )
+  useEffect(() => {
+    if (!planId) return
+    ensureWeekdaySlots(planId)
+  }, [planId, ensureWeekdaySlots])
+
+  const sortedDays = useMemo(() => {
+    if (!plan) return []
+    const weekdays = plan.days
+      .filter((d) => d.dayOfWeek != null)
+      .sort((a, b) => (a.dayOfWeek ?? 0) - (b.dayOfWeek ?? 0))
+    const customs = plan.days
+      .filter((d) => d.dayOfWeek == null)
+      .sort((a, b) => a.order - b.order)
+    return [...weekdays, ...customs]
+  }, [plan])
 
   const dayIds = useMemo(() => sortedDays.map((d) => d.id), [sortedDays])
 
@@ -299,6 +306,24 @@ export default function PlanDetailPage() {
     const name =
       dayName.trim() ||
       (typeof dayOfWeek === 'number' ? WEEKDAY_LABELS[dayOfWeek - 1] : `Day ${plan.days.length + 1}`)
+
+    if (typeof dayOfWeek === 'number') {
+      const existing = plan.days.find((d) => d.dayOfWeek === dayOfWeek)
+      if (existing) {
+        updateDay(plan.id, existing.id, {
+          muscleFocus,
+          isRestDay: false,
+          name: WEEKDAY_LABELS[dayOfWeek - 1],
+        })
+        setShowAddDay(false)
+        setDayName('')
+        setMuscleFocus('')
+        setDayOfWeek('')
+        router.push(`/plans/${plan.id}/days/${existing.id}`)
+        return
+      }
+    }
+
     const id = addDay({
       planId: plan.id,
       name,
@@ -313,9 +338,10 @@ export default function PlanDetailPage() {
   }
 
   const markAsRestDay = (dayId: string) => {
+    const day = plan.days.find((d) => d.id === dayId)
     updateDay(plan.id, dayId, {
       isRestDay: true,
-      name: 'Rest Day',
+      name: day?.dayOfWeek != null ? WEEKDAY_LABELS[day.dayOfWeek - 1] : 'Rest Day',
       muscleFocus: 'Rest',
     })
   }
@@ -348,12 +374,21 @@ export default function PlanDetailPage() {
     setActiveDragId(null)
     if (!over || active.id === over.id) return
     suppressOpenRef.current = true
-    const next = reorderIds(dayIds, active.id, over.id)
-    reorderDays(plan.id, next)
+    swapDayWorkouts(plan.id, String(active.id), String(over.id))
   }
 
   const handleDragCancel = () => {
     setActiveDragId(null)
+  }
+
+  const handleClearOrRemove = (day: PlanDay) => {
+    const empty = !day.isRestDay && day.exercises.length === 0
+    if (day.dayOfWeek != null && empty) return
+    const label =
+      day.dayOfWeek != null
+        ? `Clear ${day.name} back to an empty placeholder?`
+        : `Remove ${day.name}?`
+    if (confirm(label)) clearOrRemoveDay(plan.id, day.id)
   }
 
   return (
@@ -435,9 +470,9 @@ export default function PlanDetailPage() {
           <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             Workout Days
           </h2>
-          {sortedDays.length > 1 && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">Hold &amp; drag to reorder</p>
-          )}
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Mon–Sun slots · hold &amp; drag to move a workout
+          </p>
         </div>
         <button
           type="button"
@@ -454,7 +489,7 @@ export default function PlanDetailPage() {
           <input
             value={dayName}
             onChange={(e) => setDayName(e.target.value)}
-            placeholder="Day name (e.g. Monday)"
+            placeholder="Day name (e.g. Push Day)"
             className="w-full h-11 bg-muted border border-border rounded-[16px] px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
           />
           <input
@@ -468,7 +503,7 @@ export default function PlanDetailPage() {
             onChange={(e) => setDayOfWeek(e.target.value ? Number(e.target.value) : '')}
             className="w-full h-11 bg-muted border border-border rounded-[16px] px-3 text-sm text-foreground focus:outline-none focus:border-primary"
           >
-            <option value="">No weekday link</option>
+            <option value="">Custom day (no weekday)</option>
             {WEEKDAY_LABELS.map((label, i) => (
               <option key={label} value={i + 1}>
                 {label}
@@ -480,7 +515,7 @@ export default function PlanDetailPage() {
             onClick={handleAddDay}
             className="w-full h-11 rounded-[16px] bg-primary text-primary-foreground font-bold text-sm cursor-pointer"
           >
-            Add Day
+            {typeof dayOfWeek === 'number' ? `Open ${WEEKDAY_LABELS[dayOfWeek - 1]}` : 'Add Day'}
           </button>
         </div>
       )}
@@ -513,9 +548,7 @@ export default function PlanDetailPage() {
                     onRepeat={() => setRepeatSourceDayId(day.id)}
                     onMarkRest={() => markAsRestDay(day.id)}
                     onUnmarkRest={() => unmarkRestDay(day.id, day.dayOfWeek)}
-                    onRemove={() => {
-                      if (confirm(`Remove ${day.name}?`)) deleteDay(plan.id, day.id)
-                    }}
+                    onRemove={() => handleClearOrRemove(day)}
                   />
                 )
               })}
