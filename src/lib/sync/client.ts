@@ -137,6 +137,14 @@ export function applyPayloadToStores(payload: UserSyncPayload) {
   const profile = pick('profile')
 
   usePlanStore.setState({ plans: plans.data })
+  // Always keep Mon–Sun placeholders so drag targets survive remote merges
+  let ensuredExtraSlots = false
+  for (const plan of usePlanStore.getState().plans) {
+    const before = plan.days.length
+    usePlanStore.getState().ensureWeekdaySlots(plan.id)
+    const after = usePlanStore.getState().plans.find((p) => p.id === plan.id)?.days.length ?? before
+    if (after > before) ensuredExtraSlots = true
+  }
   useHistoryStore.setState({ workouts: history.data })
   useWorkoutStore.setState({ activeSession: activeWorkout.data })
   useProgressStore.setState({
@@ -157,7 +165,7 @@ export function applyPayloadToStores(payload: UserSyncPayload) {
     experienceLevel: profile.data.experienceLevel,
   })
 
-  meta.storeTimestamps.plans = plans.updatedAt
+  meta.storeTimestamps.plans = ensuredExtraSlots ? nowIso() : plans.updatedAt
   meta.storeTimestamps.history = history.updatedAt
   meta.storeTimestamps.activeWorkout = activeWorkout.updatedAt
   meta.storeTimestamps.progress = progress.updatedAt

@@ -675,6 +675,15 @@ export const usePlanStore = create<PlanState>()(
     }),
     {
       name: 'gymtrack-workout-plans',
+      onRehydrateStorage: () => (state) => {
+        if (!state?.plans?.length) return
+        // Defer so actions are fully bound after rehydrate
+        queueMicrotask(() => {
+          for (const plan of usePlanStore.getState().plans) {
+            usePlanStore.getState().ensureWeekdaySlots(plan.id)
+          }
+        })
+      },
     }
   )
 )

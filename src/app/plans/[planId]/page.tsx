@@ -5,16 +5,16 @@ import { useParams, useRouter } from 'next/navigation'
 import {
   DndContext,
   DragOverlay,
+  PointerSensor,
+  TouchSensor,
   closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import {
   ArrowLeft,
   Plus,
@@ -29,18 +29,17 @@ import {
 import { usePlanStore, type PlanDay } from '@/stores/planStore'
 import { WEEKDAY_LABELS } from '@/data/exercises'
 import { RepeatDayModal } from '@/components/plans/RepeatDayModal'
-import { useLongPressSortableSensors } from '@/lib/dnd'
 
 function daySubtitle(day: PlanDay): string {
   if (day.isRestDay) return 'Recovery · no training'
   if (day.muscleFocus.trim()) return day.muscleFocus
-  if (day.exercises.length === 0) return 'Empty placeholder · tap to add'
+  if (day.exercises.length === 0) return 'Empty · drop a workout here'
   return 'No muscle focus'
 }
 
 function dayMeta(day: PlanDay): string {
   if (day.isRestDay) return 'Rest day'
-  if (day.exercises.length === 0) return 'Drag a workout here or tap to fill'
+  if (day.exercises.length === 0) return 'Hold another day and drop it here'
   const preview = day.exercises
     .slice(0, 2)
     .map((e) => e.name)
@@ -49,12 +48,19 @@ function dayMeta(day: PlanDay): string {
   return `${day.exercises.length} exercise${day.exercises.length === 1 ? '' : 's'} · ${preview}${more}`
 }
 
+function isEmptyDay(day: PlanDay) {
+  return !day.isRestDay && day.exercises.length === 0
+}
+
 type DayCardBodyProps = {
   day: PlanDay
   showRestMark: boolean
   canRepeat: boolean
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
+  /** Source slot while dragging — keep visible at low opacity */
   isDragging?: boolean
+  /** Another workout is hovering this slot */
+  isOver?: boolean
   onOpen: () => void
   onRepeat: () => void
   onMarkRest: () => void
@@ -68,24 +74,27 @@ function DayCardBody({
   canRepeat,
   dragHandleProps,
   isDragging,
+  isOver,
   onOpen,
   onRepeat,
   onMarkRest,
   onUnmarkRest,
   onRemove,
 }: DayCardBodyProps) {
-  const empty = !day.isRestDay && day.exercises.length === 0
+  const empty = isEmptyDay(day)
   const isWeekday = day.dayOfWeek != null
 
   return (
     <div
-      className={`bg-card overflow-hidden rounded-[20px] border ${
+      className={`overflow-hidden rounded-[20px] border transition-opacity ${
         day.isRestDay
-          ? 'border-sky-500/30'
+          ? 'border-sky-500/30 bg-card'
           : empty
-            ? 'border-dashed border-border/80 bg-muted/20'
-            : 'border-border'
-      } ${isDragging ? 'opacity-40' : ''}`}
+            ? 'border-dashed border-border bg-muted/30'
+            : 'border-border bg-card'
+      } ${isOver ? 'opacity-100 ring-2 ring-primary/45 border-primary/40' : ''} ${
+        !isOver && (empty || isDragging) ? 'opacity-30' : 'opacity-100'
+      }`}
     >
       <div className={`flex items-stretch ${empty ? 'min-h-[56px]' : ''}`}>
         <button
@@ -177,7 +186,7 @@ function DayCardBody({
   )
 }
 
-type SortableDayCardProps = {
+type DaySlotCardProps = {
   day: PlanDay
   showRestMark: boolean
   canRepeat: boolean
@@ -188,7 +197,8 @@ type SortableDayCardProps = {
   onRemove: () => void
 }
 
-function SortableDayCard({
+/** Fixed weekday slot: droppable always, draggable via grip — list order never shifts. */
+function DaySlotCard({
   day,
   showRestMark,
   canRepeat,
@@ -197,23 +207,25 @@ function SortableDayCard({
   onMarkRest,
   onUnmarkRest,
   onRemove,
-}: SortableDayCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+}: DaySlotCardProps) {
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: day.id })
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id: day.id,
   })
 
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+  const setRefs = (node: HTMLElement | null) => {
+    setDropRef(node)
+    setDragRef(node)
   }
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setRefs}>
       <DayCardBody
         day={day}
         showRestMark={showRestMark}
         canRepeat={canRepeat}
         isDragging={isDragging}
+        isOver={isOver}
         dragHandleProps={{ ...attributes, ...listeners }}
         onOpen={onOpen}
         onRepeat={onRepeat}
@@ -249,12 +261,28 @@ export default function PlanDetailPage() {
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const suppressOpenRef = useRef(false)
 
-  const sensors = useLongPressSortableSensors()
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: 250, tolerance: 6 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 6 },
+    })
+  )
+
+  const weekdayKey = useMemo(() => {
+    if (!plan) return ''
+    return plan.days
+      .map((d) => d.dayOfWeek)
+      .filter((d): d is number => typeof d === 'number')
+      .sort((a, b) => a - b)
+      .join(',')
+  }, [plan])
 
   useEffect(() => {
     if (!planId) return
     ensureWeekdaySlots(planId)
-  }, [planId, ensureWeekdaySlots])
+  }, [planId, weekdayKey, ensureWeekdaySlots])
 
   const sortedDays = useMemo(() => {
     if (!plan) return []
@@ -266,8 +294,6 @@ export default function PlanDetailPage() {
       .sort((a, b) => a.order - b.order)
     return [...weekdays, ...customs]
   }, [plan])
-
-  const dayIds = useMemo(() => sortedDays.map((d) => d.id), [sortedDays])
 
   const repeatSourceDay = useMemo(
     () => (repeatSourceDayId ? sortedDays.find((d) => d.id === repeatSourceDayId) ?? null : null),
@@ -382,7 +408,7 @@ export default function PlanDetailPage() {
   }
 
   const handleClearOrRemove = (day: PlanDay) => {
-    const empty = !day.isRestDay && day.exercises.length === 0
+    const empty = isEmptyDay(day)
     if (day.dayOfWeek != null && empty) return
     const label =
       day.dayOfWeek != null
@@ -471,7 +497,7 @@ export default function PlanDetailPage() {
             Workout Days
           </h2>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            Mon–Sun slots · hold &amp; drag to move a workout
+            Empty days stay at 30% · hold &amp; drop to move a workout
           </p>
         </div>
         <button
@@ -534,35 +560,31 @@ export default function PlanDetailPage() {
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <SortableContext items={dayIds} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2.5">
-              {sortedDays.map((day) => {
-                const showRestMark = day.exercises.length === 0 && !day.isRestDay
-                return (
-                  <SortableDayCard
-                    key={day.id}
-                    day={day}
-                    showRestMark={showRestMark}
-                    canRepeat={sortedDays.length > 1}
-                    onOpen={() => openDay(day.id)}
-                    onRepeat={() => setRepeatSourceDayId(day.id)}
-                    onMarkRest={() => markAsRestDay(day.id)}
-                    onUnmarkRest={() => unmarkRestDay(day.id, day.dayOfWeek)}
-                    onRemove={() => handleClearOrRemove(day)}
-                  />
-                )
-              })}
-            </div>
-          </SortableContext>
+          <div className="space-y-2.5">
+            {sortedDays.map((day) => {
+              const showRestMark = day.exercises.length === 0 && !day.isRestDay
+              return (
+                <DaySlotCard
+                  key={day.id}
+                  day={day}
+                  showRestMark={showRestMark}
+                  canRepeat={sortedDays.length > 1}
+                  onOpen={() => openDay(day.id)}
+                  onRepeat={() => setRepeatSourceDayId(day.id)}
+                  onMarkRest={() => markAsRestDay(day.id)}
+                  onUnmarkRest={() => unmarkRestDay(day.id, day.dayOfWeek)}
+                  onRemove={() => handleClearOrRemove(day)}
+                />
+              )
+            })}
+          </div>
 
           <DragOverlay>
             {activeDragDay ? (
-              <div className="scale-[1.02] shadow-xl rounded-[20px]">
+              <div className="scale-[1.02] shadow-xl rounded-[20px] opacity-100">
                 <DayCardBody
                   day={activeDragDay}
-                  showRestMark={
-                    activeDragDay.exercises.length === 0 && !activeDragDay.isRestDay
-                  }
+                  showRestMark={isEmptyDay(activeDragDay)}
                   canRepeat={sortedDays.length > 1}
                   onOpen={() => undefined}
                   onRepeat={() => undefined}
