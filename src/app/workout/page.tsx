@@ -736,6 +736,10 @@ export default function WorkoutPage() {
           onOpenChange={setDemoVideoOpen}
           exerciseName={setContext.exercise.name}
           videoUrl={currentExerciseVideoUrl}
+          onEditDemo={() => {
+            setDemoVideoOpen(false)
+            setAddDemoOpen(true)
+          }}
         />
       )}
 

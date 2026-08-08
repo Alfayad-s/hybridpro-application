@@ -1,14 +1,17 @@
 'use client'
 
 import { Drawer } from 'vaul'
-import { X } from 'lucide-react'
+import { ImagePlus, X } from 'lucide-react'
 import { ExerciseVideoPreview } from '@/components/exercises/ExerciseVideoPreview'
+import { Button } from '@/components/ui/button'
 
 type WorkoutExerciseDemoSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   exerciseName: string
   videoUrl: string
+  /** Opens the photo/video editor for this exercise. */
+  onEditDemo?: () => void
 }
 
 export function WorkoutExerciseDemoSheet({
@@ -16,6 +19,7 @@ export function WorkoutExerciseDemoSheet({
   onOpenChange,
   exerciseName,
   videoUrl,
+  onEditDemo,
 }: WorkoutExerciseDemoSheetProps) {
   return (
     <Drawer.Root open={open} onOpenChange={onOpenChange}>
@@ -55,6 +59,19 @@ export function WorkoutExerciseDemoSheet({
               className="h-full"
             />
           </div>
+
+          {onEditDemo && (
+            <div className="shrink-0 border-t border-border/50 bg-background px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <Button
+                type="button"
+                onClick={onEditDemo}
+                className="w-full h-12 rounded-[16px] bg-muted hover:bg-muted/80 text-foreground border-0 gap-2 font-bold"
+              >
+                <ImagePlus className="w-4 h-4 text-primary" />
+                Edit demo video or image
+              </Button>
+            </div>
+          )}
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

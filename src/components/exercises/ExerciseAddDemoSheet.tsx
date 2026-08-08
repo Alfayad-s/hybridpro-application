@@ -58,7 +58,9 @@ export function ExerciseAddDemoSheet({
           <div className="flex shrink-0 items-center justify-between gap-3 px-5 pt-2 pb-3 border-b border-border/50">
             <div className="min-w-0">
               <Drawer.Title className="text-base font-bold text-foreground tracking-tight truncate">
-                Add demo
+                {initialVideoUrl || (initialImageUrl && initialImageUrl !== DEFAULT_EXERCISE_IMAGE)
+                  ? 'Edit demo'
+                  : 'Add demo'}
               </Drawer.Title>
               <Drawer.Description className="text-[11px] text-muted-foreground truncate">
                 {exerciseName} · photo and/or video
@@ -88,7 +90,9 @@ export function ExerciseAddDemoSheet({
               disabled={!canSave}
               onClick={handleSave}
             >
-              Save demo
+              {initialVideoUrl || (initialImageUrl && initialImageUrl !== DEFAULT_EXERCISE_IMAGE)
+                ? 'Save changes'
+                : 'Save demo'}
             </Button>
           </div>
         </Drawer.Content>
