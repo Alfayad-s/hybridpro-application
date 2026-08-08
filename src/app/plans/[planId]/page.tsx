@@ -1,7 +1,20 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import {
   ArrowLeft,
   Plus,
@@ -11,10 +24,211 @@ import {
   Dumbbell,
   Coffee,
   Copy,
+  GripVertical,
 } from 'lucide-react'
-import { usePlanStore } from '@/stores/planStore'
+import { usePlanStore, type PlanDay } from '@/stores/planStore'
 import { WEEKDAY_LABELS } from '@/data/exercises'
 import { RepeatDayModal } from '@/components/plans/RepeatDayModal'
+import { reorderIds, useLongPressSortableSensors } from '@/lib/dnd'
+
+function weekdayBadgeLabel(day: PlanDay): string | null {
+  if (!day.dayOfWeek) return null
+  const label = WEEKDAY_LABELS[day.dayOfWeek - 1]
+  if (!label) return null
+  if (day.name.trim().toLowerCase() === label.toLowerCase()) return null
+  return label.slice(0, 3)
+}
+
+function daySubtitle(day: PlanDay): string {
+  if (day.isRestDay) return 'Recovery · no training'
+  if (day.muscleFocus.trim()) return day.muscleFocus
+  if (day.exercises.length === 0) return 'Tap to add exercises'
+  return 'No muscle focus'
+}
+
+function dayMeta(day: PlanDay): string {
+  if (day.isRestDay) return 'Rest day'
+  if (day.exercises.length === 0) return 'Empty day'
+  const preview = day.exercises
+    .slice(0, 2)
+    .map((e) => e.name)
+    .join(', ')
+  const more = day.exercises.length > 2 ? '…' : ''
+  return `${day.exercises.length} exercise${day.exercises.length === 1 ? '' : 's'} · ${preview}${more}`
+}
+
+type DayCardBodyProps = {
+  day: PlanDay
+  showRestMark: boolean
+  canRepeat: boolean
+  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
+  isDragging?: boolean
+  onOpen: () => void
+  onRepeat: () => void
+  onMarkRest: () => void
+  onUnmarkRest: () => void
+  onRemove: () => void
+}
+
+function DayCardBody({
+  day,
+  showRestMark,
+  canRepeat,
+  dragHandleProps,
+  isDragging,
+  onOpen,
+  onRepeat,
+  onMarkRest,
+  onUnmarkRest,
+  onRemove,
+}: DayCardBodyProps) {
+  const badge = weekdayBadgeLabel(day)
+  const empty = !day.isRestDay && day.exercises.length === 0
+
+  return (
+    <div
+      className={`bg-card border rounded-[20px] overflow-hidden ${
+        day.isRestDay ? 'border-sky-500/30' : 'border-border'
+      } ${isDragging ? 'opacity-40' : ''}`}
+    >
+      <div className={`flex items-stretch ${empty ? 'min-h-[56px]' : ''}`}>
+        <button
+          type="button"
+          className="shrink-0 px-2.5 flex items-center text-muted-foreground touch-none cursor-grab active:cursor-grabbing"
+          aria-label="Hold to reorder"
+          {...dragHandleProps}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpen}
+          className={`flex-1 min-w-0 text-left cursor-pointer hover:bg-muted/60 ${
+            empty ? 'py-3 pr-3' : 'p-3.5 pr-3'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-bold text-foreground">{day.name}</h3>
+                {badge && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {badge}
+                  </span>
+                )}
+                {day.isRestDay && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 border border-sky-500/25 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-sky-500">
+                    <Coffee className="w-3 h-3" />
+                    Rest
+                  </span>
+                )}
+              </div>
+              <p
+                className={`text-xs font-semibold ${
+                  empty && !day.muscleFocus ? 'text-muted-foreground' : 'text-primary'
+                }`}
+              >
+                {daySubtitle(day)}
+              </p>
+              {!empty && (
+                <p className="text-[11px] text-muted-foreground">{dayMeta(day)}</p>
+              )}
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+          </div>
+        </button>
+      </div>
+
+      <div className="px-3 pb-2.5 flex items-center gap-1.5 flex-wrap border-t border-border/40 pt-2">
+        {canRepeat && (
+          <button
+            type="button"
+            onClick={onRepeat}
+            className="h-7 px-2.5 rounded-full bg-muted border border-border text-[10px] font-bold text-foreground flex items-center gap-1 cursor-pointer active:scale-95"
+          >
+            <Copy className="w-3 h-3" />
+            Repeat
+          </button>
+        )}
+        {showRestMark && (
+          <button
+            type="button"
+            onClick={onMarkRest}
+            className="h-7 px-2.5 rounded-full bg-sky-500/15 border border-sky-500/25 text-[10px] font-bold text-sky-500 flex items-center gap-1 cursor-pointer active:scale-95"
+          >
+            <Coffee className="w-3 h-3" />
+            Rest
+          </button>
+        )}
+        {day.isRestDay && day.exercises.length === 0 && (
+          <button
+            type="button"
+            onClick={onUnmarkRest}
+            className="h-7 px-2.5 text-[10px] font-semibold text-muted-foreground cursor-pointer"
+          >
+            Unmark
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="h-7 px-2.5 ml-auto text-[10px] font-semibold text-destructive cursor-pointer"
+        >
+          Remove
+        </button>
+      </div>
+    </div>
+  )
+}
+
+type SortableDayCardProps = {
+  day: PlanDay
+  showRestMark: boolean
+  canRepeat: boolean
+  onOpen: () => void
+  onRepeat: () => void
+  onMarkRest: () => void
+  onUnmarkRest: () => void
+  onRemove: () => void
+}
+
+function SortableDayCard({
+  day,
+  showRestMark,
+  canRepeat,
+  onOpen,
+  onRepeat,
+  onMarkRest,
+  onUnmarkRest,
+  onRemove,
+}: SortableDayCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: day.id,
+  })
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <DayCardBody
+        day={day}
+        showRestMark={showRestMark}
+        canRepeat={canRepeat}
+        isDragging={isDragging}
+        dragHandleProps={{ ...attributes, ...listeners }}
+        onOpen={onOpen}
+        onRepeat={onRepeat}
+        onMarkRest={onMarkRest}
+        onUnmarkRest={onUnmarkRest}
+        onRemove={onRemove}
+      />
+    </div>
+  )
+}
 
 export default function PlanDetailPage() {
   const { planId } = useParams<{ planId: string }>()
@@ -25,6 +239,7 @@ export default function PlanDetailPage() {
   const addDay = usePlanStore((s) => s.addDay)
   const updateDay = usePlanStore((s) => s.updateDay)
   const deleteDay = usePlanStore((s) => s.deleteDay)
+  const reorderDays = usePlanStore((s) => s.reorderDays)
   const deletePlan = usePlanStore((s) => s.deletePlan)
   const repeatDayToDays = usePlanStore((s) => s.repeatDayToDays)
 
@@ -35,11 +250,17 @@ export default function PlanDetailPage() {
   const [muscleFocus, setMuscleFocus] = useState('')
   const [dayOfWeek, setDayOfWeek] = useState<number | ''>('')
   const [repeatSourceDayId, setRepeatSourceDayId] = useState<string | null>(null)
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
+  const suppressOpenRef = useRef(false)
+
+  const sensors = useLongPressSortableSensors()
 
   const sortedDays = useMemo(
     () => (plan ? [...plan.days].sort((a, b) => a.order - b.order) : []),
     [plan]
   )
+
+  const dayIds = useMemo(() => sortedDays.map((d) => d.id), [sortedDays])
 
   const repeatSourceDay = useMemo(
     () => (repeatSourceDayId ? sortedDays.find((d) => d.id === repeatSourceDayId) ?? null : null),
@@ -53,6 +274,10 @@ export default function PlanDetailPage() {
 
   const repeatMode =
     repeatSourceDay && repeatSourceDay.exercises.length > 0 ? 'spread' : 'fill'
+
+  const activeDragDay = activeDragId
+    ? sortedDays.find((d) => d.id === activeDragId) ?? null
+    : null
 
   if (!plan) {
     return (
@@ -104,6 +329,31 @@ export default function PlanDetailPage() {
           : 'Workout Day',
       muscleFocus: '',
     })
+  }
+
+  const openDay = (dayId: string) => {
+    if (suppressOpenRef.current) {
+      suppressOpenRef.current = false
+      return
+    }
+    router.push(`/plans/${plan.id}/days/${dayId}`)
+  }
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id))
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveDragId(null)
+    if (!over || active.id === over.id) return
+    suppressOpenRef.current = true
+    const next = reorderIds(dayIds, active.id, over.id)
+    reorderDays(plan.id, next)
+  }
+
+  const handleDragCancel = () => {
+    setActiveDragId(null)
   }
 
   return (
@@ -180,14 +430,19 @@ export default function PlanDetailPage() {
         </button>
       </div>
 
-      <div className="flex items-center justify-between px-0.5">
-        <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          Workout Days
-        </h2>
+      <div className="flex items-end justify-between gap-3 px-0.5">
+        <div className="min-w-0">
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            Workout Days
+          </h2>
+          {sortedDays.length > 1 && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">Hold &amp; drag to reorder</p>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setShowAddDay((v) => !v)}
-          className="text-xs font-bold text-primary flex items-center gap-1 cursor-pointer"
+          className="text-xs font-bold text-primary flex items-center gap-1 cursor-pointer shrink-0"
         >
           <Plus className="w-3.5 h-3.5" />
           Add Day
@@ -237,104 +492,55 @@ export default function PlanDetailPage() {
           <p className="text-xs text-muted-foreground">Add Monday, Push Day, or any custom day.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {sortedDays.map((day) => {
-            const showRestMark = day.exercises.length === 0 && !day.isRestDay
-
-            return (
-              <div
-                key={day.id}
-                className={`bg-card border rounded-[24px] overflow-hidden ${
-                  day.isRestDay ? 'border-sky-500/30' : 'border-border'
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => router.push(`/plans/${plan.id}/days/${day.id}`)}
-                  className="w-full p-4 flex items-center justify-between gap-3 text-left cursor-pointer hover:bg-muted/60"
-                >
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-sm font-bold text-foreground">{day.name}</h3>
-                      {day.dayOfWeek && (
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                          {WEEKDAY_LABELS[day.dayOfWeek - 1]?.slice(0, 3)}
-                        </span>
-                      )}
-                      {day.isRestDay && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 border border-sky-500/25 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-sky-500">
-                          <Coffee className="w-3 h-3" />
-                          Rest
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-primary font-semibold">
-                      {day.isRestDay
-                        ? 'Recovery · no training'
-                        : day.muscleFocus || 'No muscle focus'}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {day.isRestDay
-                        ? 'Rest day'
-                        : `${day.exercises.length} exercise${day.exercises.length === 1 ? '' : 's'}${
-                            day.exercises.length > 0
-                              ? ` · ${day.exercises
-                                  .slice(0, 2)
-                                  .map((e) => e.name)
-                                  .join(', ')}${day.exercises.length > 2 ? '…' : ''}`
-                              : ''
-                          }`}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                </button>
-                <div className="px-4 pb-3 flex items-center gap-3 flex-wrap">
-                  {sortedDays.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setRepeatSourceDayId(day.id)
-                      }}
-                      className="h-8 px-3 rounded-full bg-muted border border-border text-[11px] font-bold text-foreground flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      Repeat day
-                    </button>
-                  )}
-                  {showRestMark && (
-                    <button
-                      type="button"
-                      onClick={() => markAsRestDay(day.id)}
-                      className="h-8 px-3 rounded-full bg-sky-500/15 border border-sky-500/25 text-[11px] font-bold text-sky-500 flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    >
-                      <Coffee className="w-3.5 h-3.5" />
-                      Mark as rest day
-                    </button>
-                  )}
-                  {day.isRestDay && day.exercises.length === 0 && (
-                    <button
-                      type="button"
-                      onClick={() => unmarkRestDay(day.id, day.dayOfWeek)}
-                      className="text-[11px] font-semibold text-muted-foreground cursor-pointer"
-                    >
-                      Unmark rest day
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <SortableContext items={dayIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2.5">
+              {sortedDays.map((day) => {
+                const showRestMark = day.exercises.length === 0 && !day.isRestDay
+                return (
+                  <SortableDayCard
+                    key={day.id}
+                    day={day}
+                    showRestMark={showRestMark}
+                    canRepeat={sortedDays.length > 1}
+                    onOpen={() => openDay(day.id)}
+                    onRepeat={() => setRepeatSourceDayId(day.id)}
+                    onMarkRest={() => markAsRestDay(day.id)}
+                    onUnmarkRest={() => unmarkRestDay(day.id, day.dayOfWeek)}
+                    onRemove={() => {
                       if (confirm(`Remove ${day.name}?`)) deleteDay(plan.id, day.id)
                     }}
-                    className="text-[11px] font-semibold text-destructive cursor-pointer"
-                  >
-                    Remove day
-                  </button>
-                </div>
+                  />
+                )
+              })}
+            </div>
+          </SortableContext>
+
+          <DragOverlay>
+            {activeDragDay ? (
+              <div className="scale-[1.02] shadow-xl rounded-[20px]">
+                <DayCardBody
+                  day={activeDragDay}
+                  showRestMark={
+                    activeDragDay.exercises.length === 0 && !activeDragDay.isRestDay
+                  }
+                  canRepeat={sortedDays.length > 1}
+                  onOpen={() => undefined}
+                  onRepeat={() => undefined}
+                  onMarkRest={() => undefined}
+                  onUnmarkRest={() => undefined}
+                  onRemove={() => undefined}
+                />
               </div>
-            )
-          })}
-        </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
       <RepeatDayModal

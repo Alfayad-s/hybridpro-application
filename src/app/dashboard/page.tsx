@@ -53,6 +53,8 @@ import {
   getGroupRecovery,
   getMuscleRecovery,
   muscleIdFromSlug,
+  muscleSlugToGroup,
+  type RecoveryGroup,
   type RecoveryStatus,
 } from '@/lib/muscle-recovery'
 import {
@@ -83,6 +85,7 @@ import type { MuscleHighlights } from '@/components/muscle-map'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 import { ChallengesWidget } from '@/components/challenges/challenges-widget'
 import { WorkoutPlaylistPicker } from '@/components/spotify/workout-playlist-picker'
+import { RecoveryGroupSheet } from '@/components/recovery/RecoveryGroupSheet'
 
 const FOCUS_FROM_MUSCLE: Record<string, keyof typeof WORKOUT_MUSCLES> = {
   chest: 'chest',
@@ -489,6 +492,7 @@ export default function DashboardPage() {
   const [todayMapView, setTodayMapView] = useState<'front' | 'back'>('front')
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null)
   const [selectedMuscleSlug, setSelectedMuscleSlug] = useState<string | null>(null)
+  const [recoverySheetGroup, setRecoverySheetGroup] = useState<RecoveryGroup | null>(null)
   const [hydrated, setHydrated] = useState(areDashboardStoresHydrated)
   const [nowTick, setNowTick] = useState(() => Date.now())
   const [clock, setClock] = useState(() => new Date())
@@ -778,6 +782,15 @@ export default function DashboardPage() {
     const record = lastTrained[id]
     return getMuscleRecovery(id, record?.date ?? null, record?.volumeKg ?? 0, Date.now())
   }, [selectedMuscleSlug, lastTrained, nowTick])
+
+  const recoverySheetDetail = useMemo(() => {
+    if (!recoverySheetGroup) return null
+    return recoveryList.find((item) => item.group === recoverySheetGroup) ?? null
+  }, [recoverySheetGroup, recoveryList])
+
+  const openRecoveryGroup = (group: RecoveryGroup) => {
+    setRecoverySheetGroup(group)
+  }
 
   const startFromPlanDay = (day: PlanDay | null, nameSuffix?: string) => {
     const session = useWorkoutStore.getState().activeSession
@@ -1512,6 +1525,8 @@ export default function DashboardPage() {
                 onMuscleClick={(muscle) => {
                   setSelectedMuscleSlug(muscle)
                   setSelectedMuscle(MUSCLE_LABELS[muscle] ?? muscle)
+                  const group = muscleSlugToGroup(muscle)
+                  if (group) openRecoveryGroup(group)
                 }}
               />
             </ZoomableAnatomy>
@@ -1559,7 +1574,7 @@ export default function DashboardPage() {
                 <button
                   key={item.group}
                   type="button"
-                  onClick={() => router.push('/recovery')}
+                  onClick={() => openRecoveryGroup(item.group)}
                   className="flex flex-col items-center gap-1.5 text-center cursor-pointer active:scale-95"
                 >
                   <RecoveryRing percent={pct} color={STATUS_COLOR[item.status]} />
@@ -1574,6 +1589,14 @@ export default function DashboardPage() {
             })}
           </div>
         </div>
+
+        <RecoveryGroupSheet
+          open={recoverySheetGroup != null}
+          onOpenChange={(open) => {
+            if (!open) setRecoverySheetGroup(null)
+          }}
+          group={recoverySheetDetail}
+        />
       </section>
 
       {/* Weekly Activity */}

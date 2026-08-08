@@ -88,6 +88,7 @@ type PlanState = {
     fields: Partial<Pick<PlanExercise, 'targetSets' | 'targetReps' | 'restSeconds' | 'notes'>>
   ) => void
   removeDayExercise: (planId: string, dayId: string, exerciseRowId: string) => void
+  reorderDayExercises: (planId: string, dayId: string, exerciseRowIds: string[]) => void
   /** Replace target days' exercises with a deep copy of the source day's workout. */
   repeatDayToDays: (planId: string, sourceDayId: string, targetDayIds: string[]) => void
   getActivePlan: () => WorkoutPlan | null
@@ -450,6 +451,23 @@ export const usePlanStore = create<PlanState>()(
                       .map((ex, i) => ({ ...ex, order: i })),
                   }
             ),
+          })),
+        })),
+
+      reorderDayExercises: (planId, dayId, exerciseRowIds) =>
+        set((state) => ({
+          plans: mapPlan(state.plans, planId, (plan) => ({
+            ...plan,
+            days: plan.days.map((day) => {
+              if (day.id !== dayId) return day
+              const byId = Object.fromEntries(day.exercises.map((ex) => [ex.id, ex]))
+              return {
+                ...day,
+                exercises: exerciseRowIds
+                  .map((id, order) => (byId[id] ? { ...byId[id], order } : null))
+                  .filter(Boolean) as PlanExercise[],
+              }
+            }),
           })),
         })),
 
