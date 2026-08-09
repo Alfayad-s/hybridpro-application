@@ -1,6 +1,11 @@
-/* GymTrack service worker — rest timer notifications + basic offline shell */
+/* GymTrack service worker — rest timer notifications + basic offline shell.
+ *
+ * IMPORTANT: Do NOT cache /_next/* or HTML navigations.
+ * Next.js CSS/JS use content hashes; caching them (or HTML that points at
+ * old hashes) breaks styles after every deploy.
+ */
 
-const CACHE = 'gymtrack-shell-v2'
+const CACHE = 'gymtrack-shell-v3'
 const REST_SOUND = '/media/notificaiton-sound.wav'
 const PRECACHE = [
   '/manifest.json',
@@ -27,7 +32,11 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+        Promise.all(
+          keys
+            .filter((k) => k !== CACHE)
+            .map((k) => caches.delete(k))
+        )
       )
       .then(() => self.clients.claim())
   )
@@ -40,25 +49,18 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
 
-  // Navigation: network first, fall back to cached dashboard
+  // Let the browser handle Next build assets — never SW-cache CSS/JS chunks.
+  if (url.pathname.startsWith('/_next/')) return
+
+  // Navigations: always prefer network so HTML matches current CSS hashes.
+  // Offline fallback to precached dashboard only.
   if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone()
-          caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {})
-          return res
-        })
-        .catch(() =>
-          caches.match(req).then((cached) => cached || caches.match('/dashboard'))
-        )
-    )
+    event.respondWith(fetch(req).catch(() => caches.match('/dashboard')))
     return
   }
 
-  // Static assets: cache first
+  // Icons / media / manifest: cache-first (stable URLs)
   if (
-    url.pathname.startsWith('/_next/static/') ||
     url.pathname.startsWith('/icon-') ||
     url.pathname.startsWith('/media/') ||
     url.pathname === '/manifest.json'
