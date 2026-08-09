@@ -16,11 +16,11 @@ interface EdgeRulerSliderProps {
   className?: string
 }
 
-const TRACK_HEIGHT = 420
-const PX_PER_STEP = 14
-const VISIBLE_STEPS = Math.ceil(TRACK_HEIGHT / PX_PER_STEP) + 6
+const TRACK_HEIGHT = 440
+/** Pixels of finger travel per step — higher = less sensitive / smoother feel */
+const PX_PER_STEP = 18
+const WINDOW_STEPS = Math.ceil(TRACK_HEIGHT / PX_PER_STEP) + 10
 
-/** Fluorescent center marker */
 const NEON_GREEN = '#39FF14'
 const TICK_WHITE = 'rgba(255, 255, 255, 1)'
 
@@ -29,16 +29,43 @@ function clamp(n: number, min: number, max: number) {
 }
 
 function roundToStep(n: number, step: number) {
-  return Math.round(n / step) * step
+  const rounded = Math.round(n / step) * step
+  // Avoid float dust (e.g. 5.5000000002)
+  const decimals = step < 1 ? String(step).split('.')[1]?.length ?? 2 : 0
+  return Number(rounded.toFixed(decimals))
 }
 
 function buzz() {
   if (typeof navigator === 'undefined' || !('vibrate' in navigator)) return
   try {
-    navigator.vibrate(12)
+    navigator.vibrate(10)
   } catch {
     /* ignore */
   }
+}
+
+function lockPageScroll() {
+  const html = document.documentElement
+  const body = document.body
+  if (body.dataset.edgeSliderScrollLock) return
+  html.dataset.edgeSliderScrollLock = '1'
+  body.dataset.edgeSliderScrollLock = '1'
+  html.style.overflow = 'hidden'
+  body.style.overflow = 'hidden'
+  body.style.touchAction = 'none'
+  body.style.overscrollBehavior = 'none'
+}
+
+function unlockPageScroll() {
+  const html = document.documentElement
+  const body = document.body
+  if (!body.dataset.edgeSliderScrollLock) return
+  delete html.dataset.edgeSliderScrollLock
+  delete body.dataset.edgeSliderScrollLock
+  html.style.overflow = ''
+  body.style.overflow = ''
+  body.style.touchAction = ''
+  body.style.overscrollBehavior = ''
 }
 
 export function EdgeRulerSlider({
@@ -53,78 +80,108 @@ export function EdgeRulerSlider({
   majorEvery = 5,
   className = '',
 }: EdgeRulerSliderProps) {
-  const trackRef = useRef<HTMLDivElement>(null)
-  const dragRef = useRef<{
-    pointerId: number
-    startY: number
-    startValue: number
-  } | null>(null)
-  const lastCommittedRef = useRef(value)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const stripRef = useRef<HTMLDivElement>(null)
+  const visualRef = useRef(clamp(value, min, max))
+  const lastCommittedRef = useRef(clamp(roundToStep(value, step), min, max))
+  const draggingRef = useRef(false)
+  const pointerIdRef = useRef<number | null>(null)
+  const startYRef = useRef(0)
+  const startValueRef = useRef(0)
   const rafRef = useRef<number | null>(null)
   const pendingYRef = useRef<number | null>(null)
+  const windowCenterRef = useRef(0)
 
   const [dragging, setDragging] = useState(false)
-  // Continuous visual value for smooth scroll (may be mid-step while dragging)
-  const [visualValue, setVisualValue] = useState(() => clamp(value, min, max))
+  const [displayValue, setDisplayValue] = useState(() =>
+    clamp(roundToStep(value, step), min, max)
+  )
+  const [windowCenter, setWindowCenter] = useState(() =>
+    Math.round((clamp(value, min, max) - min) / step)
+  )
 
   const safeCommitted = clamp(roundToStep(value, step), min, max)
 
-  // Sync visual from external value when not dragging
+  const applyStripTransform = useCallback(
+    (visual: number) => {
+      const strip = stripRef.current
+      if (!strip) return
+      // Place value at vertical center: translate so visual maps to mid track
+      const stepsFromMin = (visual - min) / step
+      const y = TRACK_HEIGHT / 2 - stepsFromMin * PX_PER_STEP
+      strip.style.transform = `translate3d(0, ${y}px, 0)`
+    },
+    [min, step]
+  )
+
+  // Sync from store when not dragging
   useEffect(() => {
-    if (dragRef.current) return
-    setVisualValue(safeCommitted)
+    if (draggingRef.current) return
+    visualRef.current = safeCommitted
     lastCommittedRef.current = safeCommitted
-  }, [safeCommitted])
+    setDisplayValue(safeCommitted)
+    const center = Math.round((safeCommitted - min) / step)
+    windowCenterRef.current = center
+    setWindowCenter(center)
+    applyStripTransform(safeCommitted)
+  }, [safeCommitted, min, step, applyStripTransform])
 
-  const applyDragY = useCallback(
-    (clientY: number) => {
-      const drag = dragRef.current
-      if (!drag) return
+  // Initial paint
+  useEffect(() => {
+    applyStripTransform(visualRef.current)
+  }, [applyStripTransform])
 
-      const deltaY = clientY - drag.startY
-      // Drag up → increase
-      const raw = drag.startValue + (-deltaY / PX_PER_STEP) * step
-      const nextVisual = clamp(raw, min, max)
-      setVisualValue(nextVisual)
-
-      const snapped = clamp(roundToStep(nextVisual, step), min, max)
+  const commitIfNeeded = useCallback(
+    (visual: number) => {
+      const snapped = clamp(roundToStep(visual, step), min, max)
       if (snapped !== lastCommittedRef.current) {
         lastCommittedRef.current = snapped
+        setDisplayValue(snapped)
         buzz()
         onChange(snapped)
+      }
+
+      // Re-center tick window when we drift far from generated ticks
+      const idx = Math.round((visual - min) / step)
+      if (Math.abs(idx - windowCenterRef.current) > WINDOW_STEPS / 3) {
+        windowCenterRef.current = idx
+        setWindowCenter(idx)
       }
     },
     [min, max, step, onChange]
   )
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    e.preventDefault()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    dragRef.current = {
-      pointerId: e.pointerId,
-      startY: e.clientY,
-      startValue: visualValue,
-    }
-    lastCommittedRef.current = safeCommitted
-    setDragging(true)
-  }
+  const applyDragY = useCallback(
+    (clientY: number) => {
+      if (!draggingRef.current) return
+      const deltaY = clientY - startYRef.current
+      const raw = startValueRef.current + (-deltaY / PX_PER_STEP) * step
+      const nextVisual = clamp(raw, min, max)
+      visualRef.current = nextVisual
+      applyStripTransform(nextVisual)
+      commitIfNeeded(nextVisual)
+    },
+    [min, max, step, applyStripTransform, commitIfNeeded]
+  )
 
-  const onPointerMove = (e: React.PointerEvent) => {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== e.pointerId) return
-    pendingYRef.current = e.clientY
-    if (rafRef.current != null) return
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = null
-      const y = pendingYRef.current
-      if (y == null) return
-      applyDragY(y)
-    })
-  }
+  const scheduleDragY = useCallback(
+    (clientY: number) => {
+      pendingYRef.current = clientY
+      if (rafRef.current != null) return
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null
+        const y = pendingYRef.current
+        if (y == null) return
+        applyDragY(y)
+      })
+    },
+    [applyDragY]
+  )
 
-  const endDrag = (e: React.PointerEvent) => {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== e.pointerId) return
+  const endDrag = useCallback(() => {
+    if (!draggingRef.current) return
+    draggingRef.current = false
+    pointerIdRef.current = null
     if (rafRef.current != null) {
       cancelAnimationFrame(rafRef.current)
       rafRef.current = null
@@ -133,25 +190,105 @@ export function EdgeRulerSlider({
       applyDragY(pendingYRef.current)
       pendingYRef.current = null
     }
-    dragRef.current = null
+    const snapped = clamp(roundToStep(visualRef.current, step), min, max)
+    visualRef.current = snapped
+    lastCommittedRef.current = snapped
+    setDisplayValue(snapped)
+    applyStripTransform(snapped)
     setDragging(false)
-    const snapped = clamp(roundToStep(lastCommittedRef.current, step), min, max)
-    setVisualValue(snapped)
+    unlockPageScroll()
+  }, [min, max, step, applyDragY, applyStripTransform])
+
+  const startDrag = useCallback(
+    (clientY: number, pointerId: number | null) => {
+      draggingRef.current = true
+      pointerIdRef.current = pointerId
+      startYRef.current = clientY
+      startValueRef.current = visualRef.current
+      lastCommittedRef.current = safeCommitted
+      setDragging(true)
+      lockPageScroll()
+    },
+    [safeCommitted]
+  )
+
+  // Native non-passive touch listeners — required to block page scroll on iOS/Android
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return
+      e.preventDefault()
+      startDrag(e.touches[0].clientY, null)
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!draggingRef.current) return
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.touches.length !== 1) return
+      scheduleDragY(e.touches[0].clientY)
+    }
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!draggingRef.current) return
+      e.preventDefault()
+      endDrag()
+    }
+
+    // Block scroll anywhere on the page while this dial is active
+    const onDocTouchMove = (e: TouchEvent) => {
+      if (!draggingRef.current) return
+      e.preventDefault()
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: false })
+    el.addEventListener('touchcancel', onTouchEnd, { passive: false })
+    document.addEventListener('touchmove', onDocTouchMove, { passive: false })
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchEnd)
+      document.removeEventListener('touchmove', onDocTouchMove)
+      unlockPageScroll()
+    }
+  }, [startDrag, scheduleDragY, endDrag])
+
+  // Pointer path for mouse / stylus
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') return // handled by native touch
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    startDrag(e.clientY, e.pointerId)
+  }
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') return
+    if (!draggingRef.current || pointerIdRef.current !== e.pointerId) return
+    e.preventDefault()
+    scheduleDragY(e.clientY)
+  }
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') return
+    if (!draggingRef.current || pointerIdRef.current !== e.pointerId) return
     try {
       e.currentTarget.releasePointerCapture(e.pointerId)
     } catch {
-      /* already released */
+      /* ignore */
     }
+    endDrag()
   }
 
-  const stepIndexExact = (visualValue - min) / step
-  const centerIndex = Math.round(stepIndexExact)
-  const fractionalOffset = (stepIndexExact - centerIndex) * PX_PER_STEP
-
   const ticks = useMemo(() => {
-    const half = Math.ceil(VISIBLE_STEPS / 2)
+    const half = Math.ceil(WINDOW_STEPS / 2)
     const out: { index: number; major: boolean; label?: string }[] = []
-    for (let i = centerIndex - half; i <= centerIndex + half; i++) {
+    for (let i = windowCenter - half; i <= windowCenter + half; i++) {
       const v = min + i * step
       if (v < min - step || v > max + step) continue
       const major = i % majorEvery === 0
@@ -162,36 +299,52 @@ export function EdgeRulerSlider({
       })
     }
     return out
-  }, [centerIndex, min, max, step, majorEvery])
+  }, [windowCenter, min, max, step, majorEvery])
+
+  // After window regenerates, keep strip transform in sync
+  useEffect(() => {
+    applyStripTransform(visualRef.current)
+  }, [ticks, applyStripTransform])
 
   const isLeft = side === 'left'
-  const displayValue = step < 1 ? Number(safeCommitted.toFixed(2)) : safeCommitted
-  const activeLabel = formatTick(safeCommitted, step)
+  const activeLabel = formatTick(displayValue, step)
+  const ariaValue =
+    step < 1 ? Number(displayValue.toFixed(2)) : displayValue
 
   const bump = (dir: 1 | -1) => {
-    const next = clamp(roundToStep(safeCommitted + dir * step, step), min, max)
-    if (next !== safeCommitted) {
-      buzz()
-      setVisualValue(next)
-      onChange(next)
-    }
+    const next = clamp(roundToStep(displayValue + dir * step, step), min, max)
+    if (next === displayValue) return
+    visualRef.current = next
+    lastCommittedRef.current = next
+    setDisplayValue(next)
+    applyStripTransform(next)
+    buzz()
+    onChange(next)
   }
 
   return (
     <div
-      className={`pointer-events-auto absolute top-1/2 z-40 -translate-y-1/2 select-none ${
+      ref={rootRef}
+      className={`pointer-events-auto absolute top-1/2 z-40 -translate-y-1/2 select-none touch-none overscroll-none ${
         isLeft ? 'left-0' : 'right-0'
       } ${className}`}
-      style={{ touchAction: 'none' }}
+      style={{
+        touchAction: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        // Wide hit area for thumbs on phone edges
+        paddingLeft: isLeft ? 2 : 10,
+        paddingRight: isLeft ? 10 : 2,
+      }}
+      onContextMenu={(e) => e.preventDefault()}
     >
       <div
-        ref={trackRef}
         role="slider"
         aria-label={label}
         aria-valuemin={min}
         aria-valuemax={max}
-        aria-valuenow={safeCommitted}
-        aria-valuetext={unit ? `${displayValue} ${unit}` : String(displayValue)}
+        aria-valuenow={ariaValue}
+        aria-valuetext={unit ? `${ariaValue} ${unit}` : String(ariaValue)}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
@@ -204,28 +357,35 @@ export function EdgeRulerSlider({
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        className={`relative flex h-[420px] min-w-[4.5rem] flex-col outline-none overflow-visible ${
-          isLeft ? 'items-start pl-1' : 'items-end pr-1'
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        className={`relative flex outline-none overflow-visible ${
+          isLeft ? 'items-start' : 'items-end'
         } ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        style={{
+          height: TRACK_HEIGHT,
+          minWidth: 72,
+          touchAction: 'none',
+        }}
       >
-        {/* Vertical clip only; wide enough that tick labels aren't cut off */}
         <div
-          className={`relative h-full overflow-y-hidden overflow-x-visible ${
-            isLeft ? 'w-[4.5rem]' : 'w-[4.5rem]'
-          }`}
+          className="relative overflow-hidden"
+          style={{ height: TRACK_HEIGHT, width: 72 }}
         >
           <div
-            className="absolute inset-0 will-change-transform"
+            ref={stripRef}
+            className="absolute left-0 right-0 top-0 will-change-transform"
             style={{
-              transform: `translateY(${-fractionalOffset}px)`,
-              transition: dragging ? 'none' : 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+              // transform set via ref for 60fps; no CSS transition while dragging
+              transition: dragging
+                ? 'none'
+                : 'transform 200ms cubic-bezier(0.22, 1, 0.36, 1)',
             }}
           >
             {ticks.map((tick) => {
-              const offsetY = (tick.index - centerIndex) * PX_PER_STEP
-              const isActive = tick.index === Math.round((safeCommitted - min) / step)
+              const y = tick.index * PX_PER_STEP
+              const isActive =
+                tick.index === Math.round((displayValue - min) / step)
               const tickW = tick.major ? 18 : 11
 
               return (
@@ -233,7 +393,7 @@ export function EdgeRulerSlider({
                   key={tick.index}
                   className="absolute flex items-center"
                   style={{
-                    top: `calc(50% + ${offsetY}px)`,
+                    top: y,
                     [isLeft ? 'left' : 'right']: 0,
                     transform: 'translateY(-50%)',
                     opacity: isActive ? 0 : 0.1,
@@ -242,7 +402,7 @@ export function EdgeRulerSlider({
                   }}
                 >
                   <span
-                    className="block rounded-full shrink-0"
+                    className="block shrink-0 rounded-full"
                     style={{
                       width: tickW,
                       height: tick.major ? 2 : 1.5,
@@ -250,7 +410,7 @@ export function EdgeRulerSlider({
                     }}
                   />
                   {tick.label != null && !isActive && (
-                    <span className="text-[9px] font-semibold tabular-nums leading-none text-white whitespace-nowrap">
+                    <span className="whitespace-nowrap text-[9px] font-semibold tabular-nums leading-none text-white">
                       {tick.label}
                     </span>
                   )}
@@ -260,14 +420,13 @@ export function EdgeRulerSlider({
           </div>
         </div>
 
-        {/* Center marker + number sit outside overflow clip so the full value shows */}
         <div
           className={`pointer-events-none absolute top-1/2 z-10 flex -translate-y-1/2 items-center gap-1.5 ${
             isLeft ? 'left-1' : 'right-1 flex-row-reverse'
           }`}
         >
           <span
-            className="rounded-full shrink-0"
+            className="shrink-0 rounded-full"
             style={{
               width: 32,
               height: 5,

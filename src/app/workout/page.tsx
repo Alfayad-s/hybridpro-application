@@ -375,7 +375,7 @@ export default function WorkoutPage() {
   }
 
   return (
-    <div className="relative flex flex-col min-h-screen pb-6 overflow-hidden">
+    <div className="relative flex flex-col min-h-screen pb-6 overflow-hidden overscroll-none">
       <WorkoutExerciseMediaBackdrop
         exerciseId={setContext?.exercise.exerciseId}
         active={!demoVideoOpen}
