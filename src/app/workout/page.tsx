@@ -17,8 +17,7 @@ import {
   recoveryMusclesForExercise,
   type RecoveryMuscleId,
 } from '@/lib/muscle-recovery'
-import { WeightPicker } from '@/components/workout/WeightPicker'
-import { RepPicker } from '@/components/workout/RepPicker'
+import { EdgeRulerSlider } from '@/components/workout/EdgeRulerSlider'
 import { WorkoutRestCircle } from '@/components/workout/WorkoutRestCircle'
 import { WorkoutExerciseMediaBackdrop } from '@/components/workout/WorkoutExerciseMediaBackdrop'
 import { WorkoutExerciseDemoSheet } from '@/components/workout/WorkoutExerciseDemoSheet'
@@ -464,7 +463,7 @@ export default function WorkoutPage() {
             </Button>
           </div>
         ) : setContext ? (
-          <div className="flex flex-col flex-1">
+          <div className="relative flex flex-col flex-1">
             {/* Exercise progress dots */}
             <div className="flex justify-center gap-1.5 mb-6">
               {activeSession.exercises.map((ex, i) => {
@@ -486,7 +485,7 @@ export default function WorkoutPage() {
             </div>
 
             {/* Current set focus */}
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Exercise {setContext.exerciseIndex + 1} of {setContext.exerciseCount}
               </p>
@@ -544,22 +543,30 @@ export default function WorkoutPage() {
               )}
             </div>
 
-            {/* Reps first, then weight to avoid horizontal overflow on mobile. */}
-            <div className="space-y-3 mt-auto">
+            <div className="space-y-3 mt-auto px-8">
               <SpotifyMiniPlayer compact />
-              <div className="space-y-2.5">
-                <RepPicker
-                  value={setContext.set.reps}
-                  onChange={(r) =>
-                    updateSet(currentSet!.exerciseId, currentSet!.setIndex, { reps: r })
-                  }
-                />
-                <WeightPicker
-                  value={setContext.set.weight}
-                  onChange={(w) =>
-                    updateSet(currentSet!.exerciseId, currentSet!.setIndex, { weight: w })
-                  }
-                />
+
+              {/* Center readout — edge rulers do the adjusting */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-[18px] border border-border bg-muted/80 px-3 py-3 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Weight
+                  </p>
+                  <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-foreground">
+                    {setContext.set.weight === '' || setContext.set.weight == null
+                      ? '—'
+                      : Number.parseFloat(setContext.set.weight) || 0}
+                    <span className="ml-1 text-xs font-semibold text-muted-foreground">kg</span>
+                  </p>
+                </div>
+                <div className="rounded-[18px] border border-border bg-muted/80 px-3 py-3 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Reps
+                  </p>
+                  <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-foreground">
+                    {setContext.set.reps}
+                  </p>
+                </div>
               </div>
 
               <button
@@ -598,6 +605,39 @@ export default function WorkoutPage() {
           </div>
         ) : null}
       </div>
+
+      {/* Edge dials — true screen edges while logging a set */}
+      {setContext && !isResting && !summary && (
+        <>
+          <EdgeRulerSlider
+            side="left"
+            label="Weight"
+            unit="kg"
+            value={Number.parseFloat(setContext.set.weight) || 0}
+            onChange={(w) =>
+              updateSet(currentSet!.exerciseId, currentSet!.setIndex, {
+                weight: Number(w.toFixed(2)).toString(),
+              })
+            }
+            min={0}
+            max={300}
+            step={0.5}
+            majorEvery={10}
+          />
+          <EdgeRulerSlider
+            side="right"
+            label="Reps"
+            value={setContext.set.reps}
+            onChange={(r) =>
+              updateSet(currentSet!.exerciseId, currentSet!.setIndex, { reps: r })
+            }
+            min={0}
+            max={50}
+            step={1}
+            majorEvery={5}
+          />
+        </>
+      )}
 
       {/* Finish modal */}
       {portalReady &&
