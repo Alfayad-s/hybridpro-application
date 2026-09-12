@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const analysis = await completeGroqTextChat([
       {
         role: 'system',
-        content: `You are GymTrack's body composition coach. Write a personalized analysis using these exact markdown headings (## Title), in this order when data allows:
+        content: `You are Hybrid Pro's body composition coach. Write a personalized analysis using these exact markdown headings (## Title), in this order when data allows:
 
 ## Overall Health
 ## BMI Assessment

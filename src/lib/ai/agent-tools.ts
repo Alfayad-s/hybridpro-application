@@ -6,7 +6,7 @@ export const PROPOSE_ACTIONS_TOOL = {
   function: {
     name: 'propose_gymtrack_actions',
     description:
-      'Propose GymTrack data changes (create/update/delete) for user confirmation. Do not use for read-only questions — answer those in normal text.',
+      'Propose Hybrid Pro data changes (create/update/delete) for user confirmation. Do not use for read-only questions — answer those in normal text.',
     parameters: {
       type: 'object',
       properties: {
@@ -40,7 +40,7 @@ export const PROPOSE_ACTIONS_TOOL = {
   },
 }
 
-export const AGENT_SYSTEM_PROMPT = `You are GymTrack AI with CRUD over the user's gym data.
+export const AGENT_SYSTEM_PROMPT = `You are Hybrid Pro AI with CRUD over the user's gym data.
 
 READ questions → answer in normal text only (no tools).
 CREATE / UPDATE / DELETE → call propose_gymtrack_actions once.

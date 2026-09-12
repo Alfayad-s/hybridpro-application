@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import { LandingPage } from '@/components/landing/LandingPage'
+import { BRAND } from '@/lib/brand'
 
 export const metadata: Metadata = {
-  title: 'GymTrack — Train with clarity',
-  description:
-    'Log workouts, track progress, meals, recovery, and AI coaching — all in one mobile-first fitness app.',
+  title: `${BRAND.name} — ${BRAND.tagline}`,
+  description: BRAND.description,
 }
 
 export default function Home() {

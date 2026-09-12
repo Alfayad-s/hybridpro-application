@@ -1,4 +1,4 @@
-/** GymTrack dayOfWeek: 1 = Monday … 7 = Sunday (matches plan store). */
+/** Hybrid Pro dayOfWeek: 1 = Monday … 7 = Sunday (matches plan store). */
 
 export const WEEKDAY_NAMES = [
   'Monday',
@@ -10,7 +10,7 @@ export const WEEKDAY_NAMES = [
   'Sunday',
 ] as const
 
-/** JS Date.getDay() (0=Sun) → GymTrack 1–7 (Mon–Sun). */
+/** JS Date.getDay() (0=Sun) → Hybrid Pro 1–7 (Mon–Sun). */
 export function jsDayToPlanDay(jsDay: number): number {
   return jsDay === 0 ? 7 : jsDay
 }

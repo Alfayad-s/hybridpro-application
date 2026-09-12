@@ -1,13 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { Dumbbell } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 
 export default function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center bg-background">
-      <div className="w-16 h-16 bg-primary/15 rounded-[24px] flex items-center justify-center mb-6 border border-primary/20">
-        <Dumbbell className="w-8 h-8 text-primary" />
+      <div className="w-16 h-16 rounded-[24px] overflow-hidden mb-6 border border-border">
+        <BrandLogo size={64} className="rounded-[24px]" />
       </div>
       <h2 className="text-2xl font-bold text-foreground tracking-tight">404 — Page Not Found</h2>
       <p className="text-sm text-muted-foreground mt-2 max-w-[260px]">

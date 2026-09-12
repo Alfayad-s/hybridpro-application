@@ -1,4 +1,4 @@
-/* GymTrack service worker — rest timer notifications + basic offline shell.
+/* Hybrid Pro service worker — rest timer notifications + basic offline shell.
  *
  * IMPORTANT: Do NOT cache /_next/* or HTML navigations.
  * Next.js CSS/JS use content hashes; caching them (or HTML that points at

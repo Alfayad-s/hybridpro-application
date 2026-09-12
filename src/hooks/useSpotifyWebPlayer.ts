@@ -62,7 +62,7 @@ export function useSpotifyWebPlayer(enabled: boolean) {
         if (cancelled || !window.Spotify) return
 
         const player = new window.Spotify.Player({
-          name: 'GymTrack Player',
+          name: 'Hybrid Pro Player',
           getOAuthToken: (cb) => {
             void getToken()
               .then(cb)
@@ -100,7 +100,7 @@ export function useSpotifyWebPlayer(enabled: boolean) {
         })
 
         const ok = await player.connect()
-        if (!ok) setError('Could not connect GymTrack player')
+        if (!ok) setError('Could not connect Hybrid Pro player')
         playerRef.current = player
       } catch (err) {
         if (!cancelled) {

@@ -30,7 +30,7 @@ export async function POST() {
     const report = await completeGroqTextChat([
       {
         role: 'system',
-        content: `You write GymTrack monthly body composition summaries using ## markdown headings:
+        content: `You write Hybrid Pro monthly body composition summaries using ## markdown headings:
 ## Monthly Summary
 ## Overall Progress
 ## Muscle Gain

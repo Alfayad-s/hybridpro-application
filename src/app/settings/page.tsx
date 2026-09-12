@@ -199,7 +199,7 @@ export default function SettingsPage() {
               {isStandalone
                 ? 'Running as installed app'
                 : canInstall
-                  ? 'Add GymTrack to your home screen'
+                  ? 'Add Hybrid Pro to your home screen'
                   : 'Use browser menu → Add to Home Screen'}
             </p>
           </div>

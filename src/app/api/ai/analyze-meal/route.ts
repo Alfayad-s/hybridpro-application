@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     let raw: string
 
     if (imageUrl) {
-      const system = `You are a nutrition assistant for GymTrack.
+      const system = `You are a nutrition assistant for Hybrid Pro.
 Look at the meal photo and estimate macros for a single serving shown.
 Return ONLY valid JSON (no markdown, no prose) with this shape:
 ${JSON_SHAPE}
@@ -131,7 +131,7 @@ Be realistic. Prefer whole numbers. If the food is unclear, still guess best-eff
         },
       ])
     } else {
-      const system = `You are a nutrition assistant for GymTrack.
+      const system = `You are a nutrition assistant for Hybrid Pro.
 The user describes foods they ate in plain text (amounts, items, brands if any).
 Estimate total macros for everything listed as one meal/log entry.
 Sum all items together into a single totals object.

@@ -123,7 +123,7 @@ export function SpotifyMiniPlayer({
             {track?.name ?? 'Not playing'}
           </p>
           <p className="text-[10px] text-muted-foreground truncate">
-            {track?.artists.map((a) => a.name).join(', ') || 'GymTrack · Spotify'}
+            {track?.artists.map((a) => a.name).join(', ') || 'Hybrid Pro · Spotify'}
           </p>
         </div>
         {!compact && (

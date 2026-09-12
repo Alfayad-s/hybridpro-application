@@ -1,12 +1,12 @@
 {
-  "name": "GymTrack Workout Tracker",
-  "short_name": "GymTrack",
-  "description": "Fast and clean mobile-first workout tracking app.",
+  "name": "Hybrid Pro",
+  "short_name": "Hybrid Pro",
+  "description": "Hybrid Pro is a mobile-first training app for workouts, meals, recovery, and AI coaching.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0B0B0F",
-  "theme_color": "#0B0B0F",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "portrait",
   "categories": ["health", "fitness"],
   "icons": [

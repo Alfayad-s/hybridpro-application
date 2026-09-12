@@ -28,7 +28,7 @@ const WELCOME: AiChatMessage = {
   id: 'welcome',
   role: 'assistant',
   content:
-    'Hi, I am your GymTrack AI agent. I can answer workout questions and propose app changes — plans, workouts, history, progress, and settings — after you confirm each action. You can also attach images or talk with the mic.',
+    'Hi, I am your Hybrid Pro AI agent. I can answer workout questions and propose app changes — plans, workouts, history, progress, and settings — after you confirm each action. You can also attach images or talk with the mic.',
   animate: false,
   createdAt: new Date(0).toISOString(),
 }

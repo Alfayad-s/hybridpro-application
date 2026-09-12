@@ -75,7 +75,7 @@ function fallbackChallenges(input: ChallengeGeneratorInput): GeneratedChallenge[
   })
 
   items.push({
-    title: 'Open GymTrack',
+    title: 'Open Hybrid Pro',
     description: 'Check in and review your plan for today.',
     category: 'Habit',
     difficulty: 'Easy',
@@ -131,7 +131,7 @@ export async function generateDailyChallenges(
     const raw = await completeGroqTextChat([
       {
         role: 'system',
-        content: `You are GymTrack's daily challenge engine. Generate exactly 5 personalized fitness challenges.
+        content: `You are Hybrid Pro's daily challenge engine. Generate exactly 5 personalized fitness challenges.
 Rules:
 - Do not repeat yesterday's challenges (titles listed in input).
 - Base at least one challenge on today's workout when present.

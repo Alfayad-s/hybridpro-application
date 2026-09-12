@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { Dumbbell, Mail, Lock, Loader2, User, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Loader2, User, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/utils/supabase/client'
 import { ensureProfileClient } from '@/lib/auth/ensure-profile-client'
@@ -419,8 +420,8 @@ export default function LoginForm() {
   return (
     <div className="flex flex-col min-h-screen px-6 py-12 justify-center bg-background">
       <div className="flex flex-col items-center mb-10">
-        <div className="w-16 h-16 bg-primary/15 rounded-[24px] flex items-center justify-center mb-4 border border-primary/20">
-          <Dumbbell className="w-8 h-8 text-primary" />
+        <div className="w-16 h-16 rounded-[24px] overflow-hidden mb-4 border border-border">
+          <BrandLogo size={64} className="rounded-[24px]" priority />
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">
           {isSignUp ? 'Create an account' : 'Welcome back'}
@@ -579,7 +580,7 @@ export default function LoginForm() {
       </button>
 
       <p className="text-center text-[11px] text-muted-foreground mt-3 px-4">
-        Continuing with Google creates or signs into your GymTrack account.
+        Continuing with Google creates or signs into your Hybrid Pro account.
       </p>
 
       <p className="text-center text-sm text-muted-foreground mt-8">

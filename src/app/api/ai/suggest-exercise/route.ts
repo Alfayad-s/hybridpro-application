@@ -135,7 +135,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Exercise name is required' }, { status: 400 })
   }
 
-  const system = `You fill GymTrack custom exercise forms.
+  const system = `You fill Hybrid Pro custom exercise forms.
 Return ONLY valid JSON (no markdown, no prose) with this shape:
 {
   "name": string,

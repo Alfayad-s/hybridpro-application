@@ -11,27 +11,67 @@ import { ServiceWorkerCleanup } from '@/components/theme/ServiceWorkerCleanup'
 import { PwaRegister } from '@/components/pwa/PwaRegister'
 import { SyncProvider } from '@/components/sync/SyncProvider'
 import { HapticProvider } from '@/components/haptics/HapticProvider'
+import { BRAND } from '@/lib/brand'
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
 })
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
 export const metadata: Metadata = {
-  title: 'GymTrack — Workout Tracker',
-  description: 'Fast, clean mobile-first workout tracking and performance dashboard.',
+  metadataBase: new URL(siteUrl),
+  applicationName: BRAND.name,
+  title: {
+    default: `${BRAND.name} — ${BRAND.tagline}`,
+    template: `%s · ${BRAND.name}`,
+  },
+  description: BRAND.description,
+  keywords: [...BRAND.keywords],
+  authors: [{ name: BRAND.name }],
+  creator: BRAND.name,
+  publisher: BRAND.name,
+  category: 'fitness',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
-    title: 'GymTrack',
+    statusBarStyle: 'black-translucent',
+    title: BRAND.shortName,
   },
   icons: {
-    apple: '/icon-192x192.png',
     icon: [
-      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: BRAND.icons.png192, sizes: '192x192', type: 'image/png' },
+      { url: BRAND.icons.png512, sizes: '512x512', type: 'image/png' },
     ],
+    apple: [{ url: BRAND.icons.apple, sizes: '180x180', type: 'image/png' }],
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: BRAND.name,
+    title: `${BRAND.name} — ${BRAND.tagline}`,
+    description: BRAND.description,
+    images: [
+      {
+        url: BRAND.logo,
+        width: 512,
+        height: 512,
+        alt: `${BRAND.name} logo`,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary',
+    title: `${BRAND.name} — ${BRAND.tagline}`,
+    description: BRAND.description,
+    images: [BRAND.logo],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 }
 

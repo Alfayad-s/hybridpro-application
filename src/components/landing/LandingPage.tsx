@@ -93,8 +93,8 @@ export function LandingPage() {
       style={{ fontFamily: 'var(--font-landing-body), system-ui, sans-serif' }}
     >
       <PillNav
-        logo="/icon-192x192.png"
-        logoAlt="GymTrack"
+        logo="/company-logo.png"
+        logoAlt="Hybrid Pro"
         items={[
           { label: 'Home', href: '/' },
           { label: 'Sign in', href: '/login' },
@@ -148,7 +148,7 @@ export function LandingPage() {
               next.
             </p>
             <p className="mt-4 max-w-[40ch] text-[15px] leading-relaxed text-muted-foreground md:mt-5 md:text-base">
-              GymTrack keeps workouts, meals, recovery, and coaching in one place so consistency
+              Hybrid Pro keeps workouts, meals, recovery, and coaching in one place so consistency
               feels obvious, not overwhelming.
             </p>
 

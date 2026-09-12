@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { listenForRestSoundMessages } from '@/lib/notifications'
 
 /**
- * Registers the GymTrack service worker in production for offline shell
+ * Registers the Hybrid Pro service worker in production for offline shell
  * and background rest-timer notifications. Skipped in development so
  * ServiceWorkerCleanup can keep stale workers away from Turbopack.
  *

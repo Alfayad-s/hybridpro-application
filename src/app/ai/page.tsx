@@ -532,7 +532,7 @@ export default function AiChatPage() {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="text-center">
-            <h1 className="text-lg font-bold text-foreground tracking-tight">GymTrack AI</h1>
+            <h1 className="text-lg font-bold text-foreground tracking-tight">Hybrid Pro AI</h1>
             <p className="text-[11px] text-muted-foreground">
               Agentic workout coach
               {lastRagHits > 0

@@ -42,7 +42,7 @@ export function InstallPrompt() {
         <Download className="w-5 h-5 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-foreground">Install GymTrack</p>
+        <p className="text-sm font-bold text-foreground">Install Hybrid Pro</p>
         <p className="text-[11px] text-muted-foreground mt-0.5">
           Add to your home screen for offline access and rest timer alerts.
         </p>
