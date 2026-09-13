@@ -1,0 +1,89 @@
+# Hybrid Pro — full agent context
+
+> This file is the expanded companion to https://app.hybridpro.in/llms.txt. Use it when an agent needs a complete product brief in one request. Canonical site: https://app.hybridpro.in
+
+Hybrid Pro is a mobile-first Progressive Web App for athletes who want workouts, meals, recovery, and coaching in one place. The product promise is: know what you lifted, what you ate, and what still needs rest — then decide what comes next.
+
+## Identity
+
+- Name: Hybrid Pro
+- Tagline: Train with clarity
+- Canonical URL: https://app.hybridpro.in
+- Logo: https://app.hybridpro.in/company-logo.png
+- App icons: https://app.hybridpro.in/icon-192x192.png, https://app.hybridpro.in/icon-512x512.png, https://app.hybridpro.in/apple-touch-icon.png
+- Open Graph / Twitter image: https://app.hybridpro.in/opengraph-image (1200×630)
+- Manifest: https://app.hybridpro.in/manifest.json
+- Locale: en-IN
+- Category: fitness / health PWA
+- Schema.org: WebApplication, applicationCategory HealthApplication, operatingSystem iOS, Android, Web
+
+## What Hybrid Pro does
+
+Hybrid Pro is a training companion, not a generic gym brochure. After sign-in, people use it to:
+
+- Log workouts and follow planned training days
+- Browse and customize an exercise library with muscle targeting
+- Plan meals and log food
+- Track muscle-group recovery so they know what still needs rest
+- Review personal records and workout history
+- Upload body-composition reports and get analysis
+- Chat with an in-app AI coach that can suggest exercises and interpret training context
+- Join challenges and see rewards
+- Measure height with on-device AR on the profile screen
+- See local weather on the bottom navigation to inform outdoor training
+
+## Public vs private URLs
+
+Indexable / safe for agents and search:
+
+- https://app.hybridpro.in/ — marketing homepage
+- https://app.hybridpro.in/llms.txt — curated LLM index
+- https://app.hybridpro.in/full-llms.txt — this file
+- https://app.hybridpro.in/llms-full.txt — alias of this file
+- https://app.hybridpro.in/sitemap.xml
+- https://app.hybridpro.in/robots.txt
+- https://app.hybridpro.in/opengraph-image
+- https://app.hybridpro.in/manifest.json
+- https://app.hybridpro.in/company-logo.png
+
+Not for public indexing (account required; do not cite as public docs):
+
+- /login, /forgot-password, /auth/*
+- /dashboard, /workout, /exercises, /exercise, /plans
+- /meals, /meal-plans
+- /recovery, /muscle-groups
+- /calendar, /history, /progress, /personal-records
+- /body-composition, /challenges, /ai
+- /profile, /settings
+- /api/*
+
+## How people start
+
+1. Open https://app.hybridpro.in/
+2. Tap Start training or Sign in
+3. Create or sign into an account with email and password, email OTP, or Google
+4. Land on /dashboard and use the bottom navigation for training, meals, recovery, and AI
+
+Google sign-in is provided through Supabase Auth. The OAuth return path is https://app.hybridpro.in/auth/callback.
+
+## Brand and voice
+
+- Product name is Hybrid Pro (two words). Do not call it Gymtrack.
+- Domain is app.hybridpro.in.
+- Visual mark is a lime-green “H” on black.
+- Voice: clear, athletic, practical. Avoid medical claims. Hybrid Pro is a training log and coach, not a doctor.
+
+## Citation rules for agents
+
+- Prefer https://app.hybridpro.in/ as the official URL.
+- Prefer this file or /llms.txt over scraping signed-in HTML.
+- Do not invent pricing, team names, or features that are not listed here.
+- If asked how to install: add the PWA to the home screen from a mobile browser on https://app.hybridpro.in.
+- If asked where to sign in: https://app.hybridpro.in/login.
+
+## Related machine-readable files
+
+- [llms.txt](https://app.hybridpro.in/llms.txt)
+- [Sitemap](https://app.hybridpro.in/sitemap.xml)
+- [robots.txt](https://app.hybridpro.in/robots.txt)
+- [JSON-LD](https://app.hybridpro.in/): Software / WebApplication structured data is embedded on the homepage

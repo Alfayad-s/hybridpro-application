@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/utils/supabase/client'
 import { ensureProfileClient } from '@/lib/auth/ensure-profile-client'
 import { appAuthCallbackUrl, setClientAuthNextPath } from '@/lib/auth/oauth-redirect'
+import { useActionLoading } from '@/components/feedback/ActionLoading'
 
 const authSchema = z.object({
   fullName: z.string().optional(),
@@ -49,6 +50,7 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { showActionLoading, hideActionLoading } = useActionLoading()
 
   const isSignUp = authMode === 'signup'
   const isVerifyOtp = authMode === 'verify-otp'
@@ -106,6 +108,7 @@ export default function LoginForm() {
     setIsLoading(true)
     setError(null)
     setInfo(null)
+    showActionLoading(isSignUp ? 'Creating your account…' : 'Signing you in…')
 
     const supabase = createClient()
 
@@ -122,6 +125,7 @@ export default function LoginForm() {
         })
 
         if (signUpError) {
+          hideActionLoading()
           setError(signUpError.message)
           return
         }
@@ -131,6 +135,7 @@ export default function LoginForm() {
         }
 
         if (!signUpData.session) {
+          hideActionLoading()
           openOtpVerification(data.email, fullName)
           return
         }
@@ -144,6 +149,7 @@ export default function LoginForm() {
         })
 
         if (signInError) {
+          hideActionLoading()
           if (isEmailNotConfirmed(signInError.message)) {
             openOtpVerification(data.email)
             return
@@ -156,6 +162,7 @@ export default function LoginForm() {
         router.refresh()
       }
     } catch {
+      hideActionLoading()
       setError('Something went wrong. Please try again.')
     } finally {
       setIsLoading(false)
@@ -166,6 +173,7 @@ export default function LoginForm() {
     setIsLoading(true)
     setError(null)
     setInfo(null)
+    showActionLoading('Verifying…')
 
     const supabase = createClient()
     const token = data.otp.trim()
@@ -185,6 +193,7 @@ export default function LoginForm() {
         })
 
         if (signupError) {
+          hideActionLoading()
           setError(signupError.message || verifyError.message)
           return
         }
@@ -215,6 +224,7 @@ export default function LoginForm() {
       router.push('/dashboard')
       router.refresh()
     } catch {
+      hideActionLoading()
       setError('Invalid or expired code. Please try again.')
     } finally {
       setIsLoading(false)
@@ -268,6 +278,7 @@ export default function LoginForm() {
     setIsGoogleLoading(true)
     setError(null)
     setInfo(null)
+    showActionLoading('Connecting to Google…')
 
     try {
       const statusRes = await fetch('/api/auth/google/status', { cache: 'no-store' })
@@ -275,6 +286,7 @@ export default function LoginForm() {
         | { enabled?: boolean; error?: string }
         | null
       if (!statusRes.ok || !status?.enabled) {
+        hideActionLoading()
         setError(
           status?.error ||
             'Google sign-in is not enabled yet. In Supabase → Authentication → Providers, turn on Google and add your Client ID / Secret.'
@@ -298,6 +310,7 @@ export default function LoginForm() {
       })
 
       if (oauthError) {
+        hideActionLoading()
         const msg = oauthError.message.toLowerCase()
         if (msg.includes('provider is not enabled') || msg.includes('unsupported provider')) {
           setError(
@@ -311,6 +324,7 @@ export default function LoginForm() {
       }
 
       if (!data.url) {
+        hideActionLoading()
         setError('Could not start Google sign-in. Check your Supabase Google provider settings.')
         setIsGoogleLoading(false)
         return
@@ -318,6 +332,7 @@ export default function LoginForm() {
 
       window.location.assign(data.url)
     } catch {
+      hideActionLoading()
       setError('Could not start Google sign-in. Please try again.')
       setIsGoogleLoading(false)
     }
@@ -406,7 +421,7 @@ export default function LoginForm() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-[52px] bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-[24px] flex items-center justify-center gap-2 border-0 shadow-lg shadow-primary/10 active:scale-[0.98] transition-all"
+            className="w-full h-[52px] bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-[24px] flex items-center justify-center gap-2 border-0 shadow-lg shadow-primary/10 transition-transform"
           >
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify Email'}
           </Button>
@@ -542,7 +557,7 @@ export default function LoginForm() {
         <Button
           type="submit"
           disabled={isLoading || isGoogleLoading}
-          className="w-full h-[52px] bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-[24px] flex items-center justify-center gap-2 border-0 shadow-lg shadow-primary/10 active:scale-[0.98] transition-all"
+          className="w-full h-[52px] bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-[24px] flex items-center justify-center gap-2 border-0 shadow-lg shadow-primary/10 transition-transform"
         >
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -567,7 +582,7 @@ export default function LoginForm() {
         type="button"
         onClick={handleGoogleSignIn}
         disabled={isLoading || isGoogleLoading}
-        className="w-full h-[52px] bg-muted border border-border hover:bg-card text-foreground font-semibold rounded-[24px] flex items-center justify-center gap-3 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+        className="w-full h-[52px] bg-muted border border-border hover:bg-card text-foreground font-semibold rounded-[24px] flex items-center justify-center gap-3 transition-transform cursor-pointer disabled:opacity-50"
       >
         {isGoogleLoading ? (
           <Loader2 className="w-5 h-5 animate-spin" />

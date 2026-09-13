@@ -1,0 +1,21 @@
+# Hybrid Pro
+
+> Hybrid Pro is a mobile-first Progressive Web App at https://app.hybridpro.in for workout logging, meal planning, muscle recovery, body composition, and AI coaching. Tagline: Train with clarity.
+
+Hybrid Pro helps athletes know what they lifted, what they ate, and what still needs rest. The public marketing page is indexable. Signed-in training screens require an account and should not be treated as public documentation.
+
+Brand: Hybrid Pro. Logo: https://app.hybridpro.in/company-logo.png. Locale: en-IN. Structured data: WebApplication (HealthApplication) on the homepage.
+
+## Docs
+
+- [Hybrid Pro homepage](https://app.hybridpro.in/): Public landing page and canonical product URL
+- [Full agent context](https://app.hybridpro.in/full-llms.txt): Complete Hybrid Pro product brief for LLM / agent context windows
+- [Open Graph image](https://app.hybridpro.in/opengraph-image): 1200×630 share image with the Hybrid Pro logo
+- [Sitemap](https://app.hybridpro.in/sitemap.xml): Indexable URLs
+- [robots.txt](https://app.hybridpro.in/robots.txt): Crawl rules for public vs signed-in routes
+
+## Optional
+
+- [PWA manifest](https://app.hybridpro.in/manifest.json): Installable app name, icons, and start URL
+- [Company logo](https://app.hybridpro.in/company-logo.png): Official Hybrid Pro mark
+- [Sign in](https://app.hybridpro.in/login): Account entry (email, OTP, or Google). Not for indexing.

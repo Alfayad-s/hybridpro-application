@@ -1,15 +1,24 @@
 {
+  "id": "https://app.hybridpro.in/",
   "name": "Hybrid Pro",
   "short_name": "Hybrid Pro",
   "description": "Hybrid Pro is a mobile-first training app for workouts, meals, recovery, and AI coaching.",
   "start_url": "/dashboard",
   "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "orientation": "portrait",
-  "categories": ["health", "fitness"],
+  "categories": ["health", "fitness", "lifestyle"],
   "icons": [
+    {
+      "src": "/company-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",

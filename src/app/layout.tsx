@@ -11,30 +11,38 @@ import { ServiceWorkerCleanup } from '@/components/theme/ServiceWorkerCleanup'
 import { PwaRegister } from '@/components/pwa/PwaRegister'
 import { SyncProvider } from '@/components/sync/SyncProvider'
 import { HapticProvider } from '@/components/haptics/HapticProvider'
+import { ActionLoadingProvider } from '@/components/feedback/ActionLoading'
+import { JsonLd } from '@/components/seo/JsonLd'
 import { BRAND, PRODUCTION_SITE_URL } from '@/lib/brand'
+import { SEO } from '@/lib/seo'
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
 })
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : PRODUCTION_SITE_URL)
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(PRODUCTION_SITE_URL),
   applicationName: BRAND.name,
   title: {
-    default: `${BRAND.name} — ${BRAND.tagline}`,
+    default: SEO.title,
     template: `%s · ${BRAND.name}`,
   },
-  description: BRAND.description,
+  description: SEO.description,
   keywords: [...BRAND.keywords],
-  authors: [{ name: BRAND.name }],
+  authors: [{ name: BRAND.name, url: PRODUCTION_SITE_URL }],
   creator: BRAND.name,
   publisher: BRAND.name,
   category: 'fitness',
+  alternates: {
+    canonical: PRODUCTION_SITE_URL,
+    types: {
+      'text/markdown': [
+        { url: '/llms.txt', title: 'llms.txt' },
+        { url: '/full-llms.txt', title: 'full-llms.txt' },
+      ],
+    },
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -43,35 +51,35 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: BRAND.logo, type: 'image/png' },
       { url: BRAND.icons.png192, sizes: '192x192', type: 'image/png' },
       { url: BRAND.icons.png512, sizes: '512x512', type: 'image/png' },
     ],
     apple: [{ url: BRAND.icons.apple, sizes: '180x180', type: 'image/png' }],
+    shortcut: BRAND.logo,
   },
   openGraph: {
     type: 'website',
-    locale: 'en_US',
+    locale: SEO.locale,
+    url: PRODUCTION_SITE_URL,
     siteName: BRAND.name,
-    title: `${BRAND.name} — ${BRAND.tagline}`,
-    description: BRAND.description,
-    images: [
-      {
-        url: BRAND.logo,
-        width: 512,
-        height: 512,
-        alt: `${BRAND.name} logo`,
-      },
-    ],
+    title: SEO.title,
+    description: SEO.description,
+    images: [SEO.ogImage],
   },
   twitter: {
-    card: 'summary',
-    title: `${BRAND.name} — ${BRAND.tagline}`,
-    description: BRAND.description,
-    images: [BRAND.logo],
+    card: 'summary_large_image',
+    title: SEO.title,
+    description: SEO.description,
+    images: [SEO.ogImage.url],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
   },
 }
 
@@ -111,6 +119,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <link rel="describedby" href="/llms.txt" />
+        <link rel="alternate" type="text/markdown" href="/llms.txt" title="LLM index" />
+        <link rel="alternate" type="text/markdown" href="/full-llms.txt" title="LLM full context" />
+        <JsonLd />
       </head>
       <body
         className={`${inter.variable} font-sans antialiased bg-background text-foreground selection:bg-primary/30`}
@@ -122,9 +134,11 @@ export default function RootLayout({
             <AuthProvider>
               <SyncProvider>
                 <MobileContainer>
-                  <MainShell>{children}</MainShell>
-                  <RestTimer />
-                  <BottomNavigation />
+                  <ActionLoadingProvider>
+                    <MainShell>{children}</MainShell>
+                    <RestTimer />
+                    <BottomNavigation />
+                  </ActionLoadingProvider>
                 </MobileContainer>
               </SyncProvider>
             </AuthProvider>

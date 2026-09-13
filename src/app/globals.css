@@ -159,6 +159,29 @@
   transition: fill 180ms ease, filter 180ms ease;
 }
 
+/* iPhone: no Vibration API, and :active often never fires. JS adds .is-pressed. */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+button,
+a,
+[role='button'],
+[data-slot='button'],
+.cursor-pointer {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.is-pressed {
+  transform: scale(0.94) !important;
+  filter: brightness(0.86);
+  transition:
+    transform 70ms ease-out,
+    filter 70ms ease-out !important;
+}
+
 .scrollbar-hide,
 .scrollbar-hide * {
   -ms-overflow-style: none !important;

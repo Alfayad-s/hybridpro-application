@@ -122,7 +122,7 @@ export function LandingPage() {
         {/* Left — content */}
         <div className="order-2 flex flex-col justify-center px-6 pb-10 pt-20 md:order-1 md:px-10 md:pb-12 md:pt-24 lg:px-14 lg:py-16">
           <div className="mx-auto w-full max-w-xl md:mx-0">
-            <h1 className="sr-only">Train with clarity.</h1>
+            <h1 className="sr-only">Hybrid Pro — Train with clarity</h1>
             <StrokeText
               text="Train with clarity."
               strokeColor="#8BB820"

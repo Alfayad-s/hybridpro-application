@@ -44,7 +44,11 @@ export async function updateSession(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/forgot-password' ||
     pathname.startsWith('/auth/') ||
-    pathname.startsWith('/api/auth/')
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/opengraph-image') ||
+    pathname.startsWith('/twitter-image') ||
+    pathname === '/icon' ||
+    pathname.startsWith('/apple-icon')
 
   const isAsset =
     pathname.startsWith('/_next') ||
