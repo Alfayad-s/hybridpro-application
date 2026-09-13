@@ -26,7 +26,6 @@ import { useWakeLock } from '@/hooks/useWakeLock'
 import { requestNotificationPermission, unlockRestSound } from '@/lib/notifications'
 import { Dumbbell, Plus, Check, Timer, Play, Flag, ChevronRight, SkipForward, ListOrdered, ImagePlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { SpotifyMiniPlayer } from '@/components/spotify/spotify-mini-player'
 import { getExerciseById } from '@/data/exercises'
 import { hasExerciseVideoPreview } from '@/components/exercises/ExerciseVideoPreview'
 import { useExerciseStore } from '@/stores/exerciseStore'
@@ -544,8 +543,6 @@ export default function WorkoutPage() {
             </div>
 
             <div className="space-y-3 mt-auto px-8">
-              <SpotifyMiniPlayer compact />
-
               {/* Center readout — edge rulers do the adjusting */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-[18px] border border-border bg-muted/80 px-3 py-3 text-center">

@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { completeGroqVisionChat } from '@/lib/groq'
+import { completeGroqVisionChat } from '@/lib/ai/complete'
 import { bodyCompositionPreviewUrl } from '@/lib/cloudinary'
 import { OCR_TRANSCRIBE_PROMPT } from '@/lib/body-composition/types'
 import { looksLikeInBodyText } from '@/lib/body-composition/parse-report'

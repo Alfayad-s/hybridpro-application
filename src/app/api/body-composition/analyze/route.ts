@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { completeGroqTextChat, completeGroqVisionChat } from '@/lib/groq'
+import { completeGroqTextChat, completeGroqVisionChat } from '@/lib/ai/complete'
 import { extractDocumentText } from '@/lib/ocr/extract-text'
 import { bodyCompositionPreviewUrl } from '@/lib/cloudinary'
 import { EXTRACT_JSON_PROMPT } from '@/lib/body-composition/types'

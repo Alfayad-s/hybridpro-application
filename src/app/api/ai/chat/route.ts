@@ -13,9 +13,8 @@ import {
   completeGroqVisionChat,
   getFailedGeneration,
   isRateLimitError,
-  type GroqContentPart,
-  type GroqMessage,
-} from '@/lib/groq'
+} from '@/lib/ai/complete'
+import type { GroqContentPart, GroqMessage } from '@/lib/groq'
 import { extractProposalPayload, looksLikeMutationIntent, looksLikePhotoExerciseImport } from '@/lib/ai/extract-proposal'
 import { validateRawProposal } from '@/lib/ai/validate-proposal'
 import { formatRagContextBlock, retrieveRagChunks } from '@/lib/ai/rag'

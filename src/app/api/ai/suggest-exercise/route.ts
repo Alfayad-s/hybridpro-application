@@ -7,7 +7,7 @@ import {
   type CreateExerciseInput,
 } from '@/data/exercises'
 import { extractProposalPayload } from '@/lib/ai/extract-proposal'
-import { completeGroqTextChat } from '@/lib/groq'
+import { completeGroqTextChat } from '@/lib/ai/complete'
 
 const SuggestSchema = z.object({
   name: z.string().trim().min(1).max(120),

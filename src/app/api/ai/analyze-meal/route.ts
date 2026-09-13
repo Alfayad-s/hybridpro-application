@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/utils/supabase/server'
-import { completeGroqTextChat, completeGroqVisionChat } from '@/lib/groq'
+import { completeGroqTextChat, completeGroqVisionChat } from '@/lib/ai/complete'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60

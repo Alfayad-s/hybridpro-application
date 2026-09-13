@@ -267,35 +267,7 @@ export const userRewards = pgTable(
   (t) => [uniqueIndex('user_rewards_user_uidx').on(t.userId)]
 )
 
-// 17. Spotify OAuth connection (tokens + profile snapshot)
-export const spotifyConnections = pgTable(
-  'spotify_connections',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .references(() => profiles.id, { onDelete: 'cascade' })
-      .notNull()
-      .unique(),
-    spotifyUserId: text('spotify_user_id').notNull(),
-    displayName: text('display_name'),
-    email: text('email'),
-    country: text('country'),
-    product: text('product'), // free | premium | open
-    imageUrl: text('image_url'),
-    accessToken: text('access_token').notNull(),
-    refreshToken: text('refresh_token').notNull(),
-    tokenExpiresAt: timestamp('token_expires_at').notNull(),
-    scope: text('scope'),
-    createdAt: timestamp('created_at').defaultNow().notNull(),
-    updatedAt: timestamp('updated_at')
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (t) => [uniqueIndex('spotify_connections_user_uidx').on(t.userId)]
-)
-
-// 18. AI RAG documents (personal memory + global fitness knowledge)
+// 17. AI RAG documents (personal memory + global fitness knowledge)
 export const aiDocuments = pgTable(
   'ai_documents',
   {

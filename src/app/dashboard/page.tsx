@@ -84,7 +84,6 @@ import {
 import type { MuscleHighlights } from '@/components/muscle-map'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 import { ChallengesWidget } from '@/components/challenges/challenges-widget'
-import { WorkoutPlaylistPicker } from '@/components/spotify/workout-playlist-picker'
 import { RecoveryGroupSheet } from '@/components/recovery/RecoveryGroupSheet'
 
 const FOCUS_FROM_MUSCLE: Record<string, keyof typeof WORKOUT_MUSCLES> = {
@@ -1160,8 +1159,6 @@ export default function DashboardPage() {
                 </p>
               </div>
             )}
-
-            <WorkoutPlaylistPicker className="mt-4" />
 
             <div className="flex gap-2 mt-3">
               {activePlan && todayDay && (

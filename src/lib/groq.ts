@@ -101,7 +101,7 @@ function keysAreMultiOrg() {
   return /^(1|true|yes)$/i.test(process.env.GROQ_MULTI_ORG_KEYS ?? '')
 }
 
-function getGroqKeys() {
+export function getGroqKeys() {
   return (process.env.GROQ_API_KEYS ?? '')
     .split(',')
     .map((key) => key.trim())

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { completeGroqTextChat } from '@/lib/groq'
+import { completeGroqTextChat } from '@/lib/ai/complete'
 import {
   getReportForUser,
   listReportsForUser,

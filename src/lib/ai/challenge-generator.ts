@@ -1,4 +1,4 @@
-import { completeGroqTextChat } from '@/lib/groq'
+import { completeGroqTextChat } from '@/lib/ai/complete'
 import { CATEGORY_META, DIFFICULTY_REWARDS } from '@/lib/challenges/rewards'
 import {
   GeneratedChallengesSchema,

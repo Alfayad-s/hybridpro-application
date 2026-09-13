@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Bell, Scale, Moon, Download, Smartphone, Music2 } from 'lucide-react'
+import { ArrowLeft, Bell, Scale, Moon, Download, Smartphone } from 'lucide-react'
 import { useProfileStore } from '@/stores/profileStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { useInstallPrompt } from '@/components/pwa/InstallPrompt'
@@ -10,8 +10,6 @@ import {
   getNotificationPermission,
   requestNotificationPermission,
 } from '@/lib/notifications'
-import { disconnectSpotifyAction } from '@/server/actions/spotify.actions'
-import type { SpotifyConnectionPublic } from '@/lib/spotify/types'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -23,20 +21,8 @@ export default function SettingsPage() {
     NotificationPermission | 'unsupported'
   >('default')
   const [notifBusy, setNotifBusy] = useState(false)
-  const [spotify, setSpotify] = useState<
-    SpotifyConnectionPublic | { connected: false } | null
-  >(null)
-  const [spotifyBusy, setSpotifyBusy] = useState(false)
-
   useEffect(() => {
     setNotifPermission(getNotificationPermission())
-  }, [])
-
-  useEffect(() => {
-    void fetch('/api/spotify/connection', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((data: SpotifyConnectionPublic | { connected: false }) => setSpotify(data))
-      .catch(() => setSpotify({ connected: false }))
   }, [])
 
   const handleEnableNotifications = async () => {
@@ -140,52 +126,6 @@ export default function SettingsPage() {
               Enable
             </button>
           ) : null}
-        </div>
-
-        {/* Spotify */}
-        <div className="bg-card border border-border rounded-[24px] p-5 flex justify-between items-center gap-3">
-          <div className="space-y-0.5 min-w-0">
-            <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Music2 className="w-4 h-4 text-[#1DB954]" />
-              Spotify
-            </span>
-            <p className="text-[10px] text-muted-foreground truncate">
-              {spotify?.connected
-                ? `Connected as ${spotify.displayName || 'Spotify user'} · ${(spotify.product || 'free').toUpperCase()}`
-                : 'Connect for workout playlists & player'}
-            </p>
-          </div>
-          {spotify?.connected ? (
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => router.push('/spotify')}
-                className="h-9 px-3 rounded-full bg-[#1DB954] text-black text-xs font-bold cursor-pointer active:scale-95"
-              >
-                Open
-              </button>
-              <button
-                type="button"
-                disabled={spotifyBusy}
-                onClick={() => {
-                  setSpotifyBusy(true)
-                  void disconnectSpotifyAction()
-                    .then(() => setSpotify({ connected: false }))
-                    .finally(() => setSpotifyBusy(false))
-                }}
-                className="h-9 px-3 rounded-full bg-muted text-foreground text-xs font-bold cursor-pointer active:scale-95 disabled:opacity-60"
-              >
-                Disconnect
-              </button>
-            </div>
-          ) : (
-            <a
-              href="/api/spotify/auth"
-              className="h-9 px-3 rounded-full bg-[#1DB954] text-black text-xs font-bold flex items-center shrink-0 active:scale-95"
-            >
-              Connect
-            </a>
-          )}
         </div>
 
         {/* Install app */}
