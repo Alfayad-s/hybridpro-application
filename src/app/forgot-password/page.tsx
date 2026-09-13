@@ -9,6 +9,7 @@ import { Mail, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { BrandLogo } from '@/components/brand/BrandLogo'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/utils/supabase/client'
+import { appAuthCallbackUrl, setClientAuthNextPath } from '@/lib/auth/oauth-redirect'
 
 const schema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
@@ -34,8 +35,9 @@ export default function ForgotPasswordPage() {
     setError(null)
 
     const supabase = createClient()
+    setClientAuthNextPath('/auth/update-password')
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/auth/update-password`,
+      redirectTo: `${appAuthCallbackUrl()}?next=/auth/update-password`,
     })
 
     setIsLoading(false)

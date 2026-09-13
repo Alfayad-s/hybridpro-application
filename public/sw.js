@@ -5,7 +5,7 @@
  * old hashes) breaks styles after every deploy.
  */
 
-const CACHE = 'gymtrack-shell-v3'
+const CACHE = 'gymtrack-shell-v4'
 const REST_SOUND = '/media/notificaiton-sound.wav'
 const PRECACHE = [
   '/manifest.json',
@@ -51,6 +51,9 @@ self.addEventListener('fetch', (event) => {
 
   // Let the browser handle Next build assets — never SW-cache CSS/JS chunks.
   if (url.pathname.startsWith('/_next/')) return
+
+  // Never intercept auth or API — OAuth codes are one-time and must hit the server.
+  if (url.pathname.startsWith('/auth/') || url.pathname.startsWith('/api/')) return
 
   // Navigations: always prefer network so HTML matches current CSS hashes.
   // Offline fallback to precached dashboard only.

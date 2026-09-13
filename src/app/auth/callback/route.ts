@@ -1,42 +1,97 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 import { ensureProfile } from '@/lib/auth/ensure-profile'
+import {
+  AUTH_NEXT_COOKIE,
+  publicAuthOrigin,
+  readAuthNextCookie,
+} from '@/lib/auth/oauth-redirect'
 import {
   avatarUrlFromAuthUser,
   fullNameFromAuthUser,
   safeAuthNextPath,
 } from '@/lib/auth/user-display'
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+function loginErrorRedirect(origin: string, error: string, message?: string) {
+  const params = new URLSearchParams({ error })
+  if (message) params.set('message', message)
+  return NextResponse.redirect(`${origin}/login?${params.toString()}`)
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const origin = publicAuthOrigin(request)
   const code = searchParams.get('code')
+  const tokenHash = searchParams.get('token_hash')
+  const type = searchParams.get('type') as
+    | 'signup'
+    | 'invite'
+    | 'magiclink'
+    | 'recovery'
+    | 'email_change'
+    | 'email'
+    | null
   const oauthError = searchParams.get('error')
   const oauthDescription = searchParams.get('error_description')
-  const next = safeAuthNextPath(searchParams.get('next'))
+  const next = safeAuthNextPath(
+    searchParams.get('next') || readAuthNextCookie(request.cookies.get(AUTH_NEXT_COOKIE)?.value)
+  )
 
   if (oauthError) {
-    const message = encodeURIComponent(
+    return loginErrorRedirect(
+      origin,
+      'oauth',
       oauthDescription || oauthError || 'Google sign-in was cancelled'
     )
-    return NextResponse.redirect(`${origin}/login?error=oauth&message=${message}`)
   }
 
-  if (code) {
-    const supabase = await createClient()
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+  if (!code && !(tokenHash && type)) {
+    return loginErrorRedirect(origin, 'auth_callback_failed')
+  }
 
-    if (!error && data.user) {
-      await ensureProfile({
-        id: data.user.id,
-        fullName: fullNameFromAuthUser(data.user),
-        avatarUrl: avatarUrlFromAuthUser(data.user),
-      })
+  // Bind session cookies to this redirect. cookies().set() + a later
+  // NextResponse.redirect() can drop the Set-Cookie headers in App Router.
+  const redirectResponse = NextResponse.redirect(`${origin}${next}`)
+  redirectResponse.cookies.set(AUTH_NEXT_COOKIE, '', { path: '/', maxAge: 0 })
 
-      return NextResponse.redirect(`${origin}${next}`)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            redirectResponse.cookies.set(name, value, options)
+          })
+        },
+      },
     }
+  )
 
-    console.error('Auth callback exchange failed:', error?.message)
+  const exchanged = code
+    ? await supabase.auth.exchangeCodeForSession(code)
+    : await supabase.auth.verifyOtp({ type: type!, token_hash: tokenHash! })
+
+  if (exchanged.error || !exchanged.data.session) {
+    console.error('Auth callback failed:', exchanged.error?.message)
+    return loginErrorRedirect(
+      origin,
+      'auth_callback_failed',
+      exchanged.error?.message || 'Authentication failed. Please try again.'
+    )
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  const user = exchanged.data.user
+  if (user) {
+    await ensureProfile({
+      id: user.id,
+      fullName: fullNameFromAuthUser(user),
+      avatarUrl: avatarUrlFromAuthUser(user),
+    })
+  }
+
+  return redirectResponse
 }

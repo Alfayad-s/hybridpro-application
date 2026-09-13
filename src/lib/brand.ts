@@ -1,3 +1,5 @@
+export const PRODUCTION_SITE_URL = 'https://app.hybridpro.in'
+
 export const BRAND = {
   name: 'Hybrid Pro',
   shortName: 'Hybrid Pro',

@@ -11,6 +11,7 @@ import { BrandLogo } from '@/components/brand/BrandLogo'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/utils/supabase/client'
 import { ensureProfileClient } from '@/lib/auth/ensure-profile-client'
+import { appAuthCallbackUrl, setClientAuthNextPath } from '@/lib/auth/oauth-redirect'
 
 const authSchema = z.object({
   fullName: z.string().optional(),
@@ -81,7 +82,7 @@ export default function LoginForm() {
     const authError = searchParams.get('error')
     const message = searchParams.get('message')
     if (authError === 'auth_callback_failed') {
-      setError('Authentication failed. Please try again.')
+      setError(message ? decodeURIComponent(message) : 'Authentication failed. Please try again.')
       return
     }
     if (authError === 'oauth') {
@@ -116,7 +117,7 @@ export default function LoginForm() {
           password: data.password,
           options: {
             data: { full_name: fullName },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: appAuthCallbackUrl(),
           },
         })
 
@@ -237,7 +238,7 @@ export default function LoginForm() {
         type: 'signup',
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: appAuthCallbackUrl(),
         },
       })
 
@@ -269,16 +270,30 @@ export default function LoginForm() {
     setInfo(null)
 
     try {
+      const statusRes = await fetch('/api/auth/google/status', { cache: 'no-store' })
+      const status = (await statusRes.json().catch(() => null)) as
+        | { enabled?: boolean; error?: string }
+        | null
+      if (!statusRes.ok || !status?.enabled) {
+        setError(
+          status?.error ||
+            'Google sign-in is not enabled yet. In Supabase → Authentication → Providers, turn on Google and add your Client ID / Secret.'
+        )
+        setIsGoogleLoading(false)
+        return
+      }
+
+      setClientAuthNextPath('/dashboard')
       const supabase = createClient()
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+          redirectTo: appAuthCallbackUrl(),
           queryParams: {
             access_type: 'offline',
             prompt: 'select_account',
           },
-          skipBrowserRedirect: false,
+          skipBrowserRedirect: true,
         },
       })
 
@@ -295,11 +310,13 @@ export default function LoginForm() {
         return
       }
 
-      // Browser should navigate to Google; keep spinner if URL was returned.
       if (!data.url) {
         setError('Could not start Google sign-in. Check your Supabase Google provider settings.')
         setIsGoogleLoading(false)
+        return
       }
+
+      window.location.assign(data.url)
     } catch {
       setError('Could not start Google sign-in. Please try again.')
       setIsGoogleLoading(false)

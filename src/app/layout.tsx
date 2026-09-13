@@ -11,7 +11,7 @@ import { ServiceWorkerCleanup } from '@/components/theme/ServiceWorkerCleanup'
 import { PwaRegister } from '@/components/pwa/PwaRegister'
 import { SyncProvider } from '@/components/sync/SyncProvider'
 import { HapticProvider } from '@/components/haptics/HapticProvider'
-import { BRAND } from '@/lib/brand'
+import { BRAND, PRODUCTION_SITE_URL } from '@/lib/brand'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -20,7 +20,7 @@ const inter = Inter({
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : PRODUCTION_SITE_URL)
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

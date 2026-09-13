@@ -34,11 +34,17 @@ export async function updateSession(request: NextRequest) {
   const url = request.nextUrl.clone()
   const pathname = url.pathname
 
+  // Leave the PKCE verifier / session cookies alone during the OAuth exchange.
+  if (pathname.startsWith('/auth/callback')) {
+    return NextResponse.next({ request })
+  }
+
   const isPublicRoute =
     pathname === '/' ||
     pathname === '/login' ||
     pathname === '/forgot-password' ||
-    pathname.startsWith('/auth/')
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/api/auth/')
 
   const isAsset =
     pathname.startsWith('/_next') ||
