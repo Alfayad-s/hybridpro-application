@@ -35,8 +35,8 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 
   return (
     <main
-      className={`flex-1 overflow-y-auto scrollbar-hide ${
-        hideBottomPad ? 'pb-0' : 'pb-32'
+      className={`flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide ${
+        hideBottomPad ? '' : 'pt-[var(--safe-top)] pb-[var(--app-bottom-pad)]'
       }`}
     >
       {showResumeBanner && (

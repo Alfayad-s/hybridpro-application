@@ -75,7 +75,7 @@ export function BottomNavigation() {
   return (
     <div className="fixed bottom-0 left-0 right-0 sm:max-w-[430px] mx-auto z-50 bg-black">
       <div
-        className={`relative border-t border-border/60 pt-3.5 pb-3.5 px-4 overflow-visible min-h-[4.75rem] ${
+        className={`relative border-t border-border/60 pt-3 pb-2.5 px-[var(--app-page-x)] overflow-visible min-h-[var(--app-nav-height)] max-[700px]:pt-2 max-[700px]:pb-1.5 ${
           showRainVideo ? '' : 'bg-black'
         }`}
       >
@@ -108,7 +108,7 @@ export function BottomNavigation() {
             href="/dashboard"
             replace
             prefetch
-            className={`flex flex-col items-center gap-1.5 py-1.5 transition-all duration-200 active:scale-95 ${
+            className={`flex flex-col items-center justify-center gap-1 min-h-11 py-1.5 transition-all duration-200 active:scale-95 ${
               homeActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -125,7 +125,7 @@ export function BottomNavigation() {
             href="/history"
             replace
             prefetch
-            className={`flex flex-col items-center gap-1.5 py-1.5 transition-all duration-200 active:scale-95 ${
+            className={`flex flex-col items-center justify-center gap-1 min-h-11 py-1.5 transition-all duration-200 active:scale-95 ${
               historyActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -153,7 +153,7 @@ export function BottomNavigation() {
             href="/progress"
             replace
             prefetch
-            className={`flex flex-col items-center gap-1.5 py-1.5 transition-all duration-200 active:scale-95 ${
+            className={`flex flex-col items-center justify-center gap-1 min-h-11 py-1.5 transition-all duration-200 active:scale-95 ${
               progressActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -170,7 +170,7 @@ export function BottomNavigation() {
             href="/meals"
             replace
             prefetch
-            className={`flex flex-col items-center gap-1.5 py-1.5 transition-all duration-200 active:scale-95 ${
+            className={`flex flex-col items-center justify-center gap-1 min-h-11 py-1.5 transition-all duration-200 active:scale-95 ${
               mealsActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
             }`}
           >

@@ -54,7 +54,7 @@ export default function UpdatePasswordPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen px-6 py-12 justify-center bg-background">
+    <div className="iphone-auth-screen">
       <div className="flex flex-col items-center mb-10">
         <div className="w-16 h-16 rounded-[24px] overflow-hidden mb-4 border border-border">
           <BrandLogo size={64} className="rounded-[24px]" priority />

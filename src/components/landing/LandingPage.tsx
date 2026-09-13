@@ -89,7 +89,7 @@ function HeroSlideshow() {
 export function LandingPage() {
   return (
     <div
-      className={`${display.variable} ${body.variable} relative flex min-h-[100dvh] flex-col overflow-x-hidden p-3 text-foreground md:p-4`}
+      className={`${display.variable} ${body.variable} relative flex min-h-dvh flex-col overflow-x-hidden p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground md:p-4`}
       style={{ fontFamily: 'var(--font-landing-body), system-ui, sans-serif' }}
     >
       <PillNav
@@ -120,7 +120,7 @@ export function LandingPage() {
         />
 
         {/* Left — content */}
-        <div className="order-2 flex flex-col justify-center px-6 pb-10 pt-20 md:order-1 md:px-10 md:pb-12 md:pt-24 lg:px-14 lg:py-16">
+        <div className="order-2 flex flex-col justify-center px-5 pb-10 pt-[max(5.75rem,calc(env(safe-area-inset-top)+4.5rem))] md:order-1 md:px-10 md:pb-12 md:pt-24 lg:px-14 lg:py-16">
           <div className="mx-auto w-full max-w-xl md:mx-0">
             <h1 className="sr-only">Hybrid Pro — Train with clarity</h1>
             <StrokeText
