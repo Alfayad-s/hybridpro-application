@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { NoiseBackground } from '@/components/ui/noise-background'
 import PillNav from '@/components/landing/PillNav'
 import StrokeText from '@/components/landing/StrokeText'
+import ParticleText from '@/components/ParticleText'
 import { cn } from '@/lib/utils'
 
 const display = Outfit({
@@ -108,6 +109,36 @@ export function LandingPage() {
         initialLoadAnimation
       />
 
+      <div
+        className="relative z-10 w-full shrink-0"
+        style={{
+          marginTop: 'max(3.5rem, calc(env(safe-area-inset-top) + 2.5rem))',
+          fontFamily: 'var(--font-landing-display), sans-serif',
+        }}
+      >
+        <div className="h-[6.25rem] w-full sm:h-[7.25rem] md:h-[8.5rem]">
+          <ParticleText
+            text="HYBRID PRO"
+            color="#F8FAFC"
+            highlightColor="#8BB820"
+            particleSize={2.8}
+            density={3}
+            scatter={160}
+            gatherDuration={1600}
+            stagger={360}
+            idleDrift={0.7}
+            pointerRepel={40}
+            repelRadius={110}
+            trigger="mount"
+            fontSize="clamp(2.6rem, 16vw, 5.5rem)"
+            fontWeight={800}
+            fontFamily="inherit"
+            glow
+            className="h-full"
+          />
+        </div>
+      </div>
+
       {/* Split hero under floating pill nav */}
       <section className="relative grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
         <div
@@ -120,7 +151,7 @@ export function LandingPage() {
         />
 
         {/* Left — content */}
-        <div className="order-2 flex flex-col justify-center px-5 pb-10 pt-[max(5.75rem,calc(env(safe-area-inset-top)+4.5rem))] md:order-1 md:px-10 md:pb-12 md:pt-24 lg:px-14 lg:py-16">
+        <div className="order-2 flex flex-col justify-center px-5 pb-10 pt-5 md:order-1 md:px-10 md:pb-12 md:pt-10 lg:px-14 lg:py-12">
           <div className="mx-auto w-full max-w-xl md:mx-0">
             <h1 className="sr-only">Hybrid Pro — Train with clarity</h1>
             <StrokeText
@@ -174,7 +205,7 @@ export function LandingPage() {
         </div>
 
         {/* Right — rounded image panel */}
-        <div className="relative order-1 min-h-[42dvh] md:order-2 md:min-h-0 md:h-auto">
+        <div className="relative order-1 min-h-[34dvh] md:order-2 md:min-h-0 md:h-auto">
           <HeroSlideshow />
         </div>
       </section>

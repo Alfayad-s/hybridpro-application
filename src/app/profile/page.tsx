@@ -24,6 +24,7 @@ import { useProfileStore } from '@/stores/profileStore'
 import { Button } from '@/components/ui/button'
 import { pushSyncBeforeLogout } from '@/components/sync/SyncProvider'
 import { ArHeightMeasureButton } from '@/components/profile/ArHeightMeasure'
+import { ActivePlanCard } from '@/components/profile/ActivePlanCard'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -298,6 +299,8 @@ export default function ProfilePage() {
           </p>
         </div>
       )}
+
+      <ActivePlanCard />
 
       {/* Options List */}
       <div className="bg-card border border-border rounded-[24px] overflow-hidden">

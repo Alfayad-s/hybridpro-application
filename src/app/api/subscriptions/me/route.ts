@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { backendGetSubscription } from '@/lib/subscriptions/backend'
+import {
+  backendAttachSubscription,
+  backendGetSubscription,
+} from '@/lib/subscriptions/backend'
 
 export const runtime = 'nodejs'
 
@@ -10,8 +13,17 @@ export async function GET() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (!user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    await backendAttachSubscription({
+      userId: user.id,
+      email: user.email,
+    })
+  } catch (error) {
+    console.error('[subscriptions/me] attach', error)
   }
 
   try {

@@ -3,11 +3,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
-import { Bot } from 'lucide-react'
 import { ChartLine } from '@/components/animate-ui/icons/chart-line'
 import { Cherry } from '@/components/animate-ui/icons/cherry'
 import { Gauge } from '@/components/animate-ui/icons/gauge'
 import { RotateCcw } from '@/components/animate-ui/icons/rotate-ccw'
+import { CompanyMark } from '@/components/brand/CompanyMark'
 import { WeatherNavTag } from '@/components/layout/WeatherNavTag'
 import { useWeather } from '@/hooks/useWeather'
 import { shouldPlayRainVideo } from '@/lib/weather/styles'
@@ -107,7 +107,7 @@ export function BottomNavigation() {
           </>
         )}
 
-        <div className="relative z-10 grid grid-cols-5 items-end gap-1">
+        <div className="relative z-10 grid grid-cols-5 items-center gap-1">
           <Link
             href="/dashboard"
             replace
@@ -143,15 +143,14 @@ export function BottomNavigation() {
             <span className="text-[10px] font-medium">History</span>
           </Link>
 
-          <div className="flex justify-center -mt-6">
-            <Link
-              href={canUseAi ? '/ai' : '/subscribe?upgrade=performance'}
-              aria-label={canUseAi ? 'Open AI chat' : 'Upgrade for AI coach'}
-              className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-all cursor-pointer border-4 border-background shadow-lg"
-            >
-              <Bot className="w-7 h-7 stroke-[2.5]" />
-            </Link>
-          </div>
+          <Link
+            href={canUseAi ? '/ai' : '/subscribe?upgrade=performance'}
+            aria-label={canUseAi ? 'Open AI chat' : 'Upgrade for AI coach'}
+            className="flex flex-col items-center justify-center gap-1 min-h-11 py-1.5 text-primary transition-all duration-200 active:scale-95"
+          >
+            <CompanyMark className="h-7 w-auto" />
+            <span className="text-[10px] font-medium">AI</span>
+          </Link>
 
           <Link
             href="/progress"

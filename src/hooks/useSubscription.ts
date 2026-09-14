@@ -15,6 +15,17 @@ export type ClientSubscription = {
   nextPlanId: string | null
 }
 
+function isActiveSubscription(subscription: ClientSubscription | null) {
+  if (!subscription || subscription.status !== 'active') return false
+  if (!subscription.expiresAt) return true
+  return new Date(subscription.expiresAt).getTime() > Date.now()
+}
+
+export function daysLeft(expiresAt: string | null | undefined) {
+  if (!expiresAt) return null
+  return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000))
+}
+
 export function useSubscription() {
   const [subscription, setSubscription] = useState<ClientSubscription | null>(null)
   const [loading, setLoading] = useState(true)
@@ -38,12 +49,14 @@ export function useSubscription() {
     }
   }, [])
 
-  const active = subscription?.status === 'active'
+  const active = isActiveSubscription(subscription)
   return {
     subscription,
     loading,
     active,
     planId: active ? subscription?.planId ?? null : null,
-    canAccess: (feature: SubscriptionFeature) => canAccess(feature, active ? subscription?.planId : null),
+    daysRemaining: daysLeft(subscription?.expiresAt),
+    canAccess: (feature: SubscriptionFeature) =>
+      canAccess(feature, active ? subscription?.planId : null),
   }
 }
