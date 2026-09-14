@@ -2,15 +2,17 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { profiles } from '@/db/schema'
+import { backendAttachSubscription } from '@/lib/subscriptions/backend'
 
 export type EnsureProfileInput = {
   id: string
   fullName?: string | null
   avatarUrl?: string | null
+  email?: string | null
 }
 
 /** Server-only — import from API routes / route handlers, not client components. */
-export async function ensureProfile({ id, fullName, avatarUrl }: EnsureProfileInput) {
+export async function ensureProfile({ id, fullName, avatarUrl, email }: EnsureProfileInput) {
   try {
     const existing = await db.query.profiles.findFirst({
       where: eq(profiles.id, id),
@@ -26,6 +28,13 @@ export async function ensureProfile({ id, fullName, avatarUrl }: EnsureProfileIn
           })
           .where(eq(profiles.id, id))
       }
+      if (email) {
+        try {
+          await backendAttachSubscription({ userId: id, email })
+        } catch (error) {
+          console.error('Failed to attach subscription:', error)
+        }
+      }
       return { ok: true as const }
     }
 
@@ -35,6 +44,14 @@ export async function ensureProfile({ id, fullName, avatarUrl }: EnsureProfileIn
       avatarUrl: avatarUrl ?? null,
       experienceLevel: 'beginner',
     })
+
+    if (email) {
+      try {
+        await backendAttachSubscription({ userId: id, email })
+      } catch (error) {
+        console.error('Failed to attach subscription:', error)
+      }
+    }
 
     return { ok: true as const }
   } catch (error) {

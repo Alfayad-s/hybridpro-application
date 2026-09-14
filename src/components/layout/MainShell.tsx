@@ -35,7 +35,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 
   return (
     <main
-      className={`flex-1 overflow-y-auto overscroll-y-contain scrollbar-hide ${
+      className={`app-main-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide ${
         hideBottomPad ? '' : 'pt-[var(--safe-top)] pb-[var(--app-bottom-pad)]'
       }`}
     >

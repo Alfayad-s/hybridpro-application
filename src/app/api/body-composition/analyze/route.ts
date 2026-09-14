@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { requireFeature } from '@/lib/subscriptions/require-feature'
 import { completeGroqTextChat, completeGroqVisionChat } from '@/lib/ai/complete'
 import { extractDocumentText } from '@/lib/ocr/extract-text'
 import { bodyCompositionPreviewUrl } from '@/lib/cloudinary'
@@ -13,14 +13,8 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireFeature('body_composition_ai')
+  if (!gate.ok) return gate.response
 
   let body: { fileUrl?: string; kind?: 'image' | 'pdf' }
   try {

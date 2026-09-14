@@ -291,3 +291,51 @@ export const aiDocuments = pgTable(
     index('ai_documents_source_type_idx').on(t.sourceType),
   ]
 )
+
+// 18. Coaching subscriptions (website Pine Labs → app access)
+export const subscriptions = pgTable(
+  'subscriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id'),
+    email: text('email').notNull(),
+    mobile: text('mobile'),
+    planId: text('plan_id').notNull(), // foundation | performance | elite
+    nextPlanId: text('next_plan_id'),
+    status: text('status').default('pending').notNull(), // pending | active | expired | cancelled
+    startsAt: timestamp('starts_at'),
+    expiresAt: timestamp('expires_at'),
+    pineOrderId: text('pine_order_id'),
+    merchantOrderReference: text('merchant_order_reference'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull(),
+  },
+  (t) => [
+    uniqueIndex('subscriptions_pine_order_uidx').on(t.pineOrderId),
+    uniqueIndex('subscriptions_merchant_ref_uidx').on(t.merchantOrderReference),
+    index('subscriptions_email_idx').on(t.email),
+    index('subscriptions_user_idx').on(t.userId),
+  ]
+)
+
+// 19. Payment records from Pine Labs (one-time 30-day charges)
+export const payments = pgTable(
+  'payments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subscriptionId: uuid('subscription_id').references(() => subscriptions.id, {
+      onDelete: 'cascade',
+    }),
+    email: text('email').notNull(),
+    planId: text('plan_id').notNull(),
+    amountPaise: integer('amount_paise').notNull(),
+    currency: text('currency').default('INR').notNull(),
+    pineOrderId: text('pine_order_id'),
+    status: text('status').default('paid').notNull(), // paid | failed
+    paidAt: timestamp('paid_at').defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex('payments_pine_order_uidx').on(t.pineOrderId),
+    index('payments_email_idx').on(t.email),
+  ]
+)

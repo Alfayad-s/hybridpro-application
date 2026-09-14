@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/utils/supabase/server'
 import { completeGroqTextChat, completeGroqVisionChat } from '@/lib/ai/complete'
+import { requireFeature } from '@/lib/subscriptions/require-feature'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -69,14 +69,8 @@ function parseSuggestion(raw: string): MealAiSuggestion | null {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireFeature('ai')
+  if (!gate.ok) return gate.response
 
   let body: { imageUrl?: string; hint?: string; description?: string }
   try {

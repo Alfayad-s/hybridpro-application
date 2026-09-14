@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     id: user.id,
     fullName: body.fullName ?? fullNameFromAuthUser(user),
     avatarUrl: body.avatarUrl ?? avatarUrlFromAuthUser(user),
+    email: user.email,
   })
 
   return NextResponse.json(result)

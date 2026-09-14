@@ -11,6 +11,7 @@ import { RotateCcw } from '@/components/animate-ui/icons/rotate-ccw'
 import { WeatherNavTag } from '@/components/layout/WeatherNavTag'
 import { useWeather } from '@/hooks/useWeather'
 import { shouldPlayRainVideo } from '@/lib/weather/styles'
+import { useSubscription } from '@/hooks/useSubscription'
 
 const RAIN_VIDEO_SRC = '/media/video/rainy-wallpaper.mp4'
 
@@ -19,10 +20,13 @@ export function BottomNavigation() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const weather = useWeather()
   const showRainVideo = shouldPlayRainVideo(weather?.label)
+  const { canAccess } = useSubscription()
+  const canUseAi = canAccess('ai')
 
   const hideNav =
     pathname === '/' ||
     pathname === '/login' ||
+    pathname === '/subscribe' ||
     pathname === '/forgot-password' ||
     pathname === '/workout' ||
     pathname === '/ai' ||
@@ -141,8 +145,8 @@ export function BottomNavigation() {
 
           <div className="flex justify-center -mt-6">
             <Link
-              href="/ai"
-              aria-label="Open AI chat"
+              href={canUseAi ? '/ai' : '/subscribe?upgrade=performance'}
+              aria-label={canUseAi ? 'Open AI chat' : 'Upgrade for AI coach'}
               className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-all cursor-pointer border-4 border-background shadow-lg"
             >
               <Bot className="w-7 h-7 stroke-[2.5]" />

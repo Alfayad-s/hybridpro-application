@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import {
   AGENT_SYSTEM_PROMPT,
   JSON_FALLBACK_PROMPT,
@@ -18,6 +17,7 @@ import type { GroqContentPart, GroqMessage } from '@/lib/groq'
 import { extractProposalPayload, looksLikeMutationIntent, looksLikePhotoExerciseImport } from '@/lib/ai/extract-proposal'
 import { validateRawProposal } from '@/lib/ai/validate-proposal'
 import { formatRagContextBlock, retrieveRagChunks } from '@/lib/ai/rag'
+import { requireFeature } from '@/lib/subscriptions/require-feature'
 
 export const maxDuration = 60
 
@@ -224,14 +224,9 @@ async function jsonFallbackResponse(
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireFeature('ai')
+  if (!gate.ok) return gate.response
+  const { user } = gate
 
   let body: ChatRequest
   try {

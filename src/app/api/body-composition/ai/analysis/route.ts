@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { requireFeature } from '@/lib/subscriptions/require-feature'
 import { completeGroqTextChat } from '@/lib/ai/complete'
 import {
   getReportForUser,
@@ -11,11 +11,9 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const gate = await requireFeature('body_composition_ai')
+  if (!gate.ok) return gate.response
+  const { user } = gate
 
   let body: { reportId?: string }
   try {

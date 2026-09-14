@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import { uploadBodyCompositionFile } from '@/lib/cloudinary'
+import { requireFeature } from '@/lib/subscriptions/require-feature'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -11,15 +11,8 @@ const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/jpg
 const PDF_TYPES = new Set(['application/pdf'])
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return NextResponse.json({ error: 'Sign in to upload a report' }, { status: 401 })
-  }
+  const gate = await requireFeature('body_composition')
+  if (!gate.ok) return gate.response
 
   let form: FormData
   try {

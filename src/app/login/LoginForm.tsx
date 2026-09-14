@@ -81,6 +81,14 @@ export default function LoginForm() {
   const otpEmail = watchOtp('email')
 
   useEffect(() => {
+    const presetEmail = searchParams.get('email')
+    if (presetEmail) {
+      setValue('email', presetEmail)
+      setOtpValue('email', presetEmail)
+    }
+  }, [searchParams, setOtpValue, setValue])
+
+  useEffect(() => {
     const authError = searchParams.get('error')
     const message = searchParams.get('message')
     if (authError === 'auth_callback_failed') {

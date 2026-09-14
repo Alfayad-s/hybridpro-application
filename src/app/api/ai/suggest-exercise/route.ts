@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/utils/supabase/server'
 import {
   EQUIPMENT_OPTIONS,
   EXERCISE_CATEGORIES,
@@ -8,6 +7,7 @@ import {
 } from '@/data/exercises'
 import { extractProposalPayload } from '@/lib/ai/extract-proposal'
 import { completeGroqTextChat } from '@/lib/ai/complete'
+import { requireFeature } from '@/lib/subscriptions/require-feature'
 
 const SuggestSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -114,14 +114,8 @@ function normalizeSuggestion(
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const gate = await requireFeature('ai')
+  if (!gate.ok) return gate.response
 
   let body: { name?: string }
   try {

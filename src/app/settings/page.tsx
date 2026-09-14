@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Bell, Scale, Moon, Download, Smartphone } from 'lucide-react'
+import { ArrowLeft, Bell, Scale, Moon, Download, Smartphone, CreditCard } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
+import { checkoutUrl } from '@/lib/subscriptions/plans'
+import { useSubscription } from '@/hooks/useSubscription'
 import { useProfileStore } from '@/stores/profileStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { useInstallPrompt } from '@/components/pwa/InstallPrompt'
@@ -13,6 +16,8 @@ import {
 
 export default function SettingsPage() {
   const router = useRouter()
+  const user = useAuthStore((s) => s.user)
+  const { subscription, active, loading: subLoading } = useSubscription()
   const { weightUnit, setWeightUnit } = useProfileStore()
   const { theme, toggleTheme } = useThemeStore()
   const isDark = theme === 'dark'
@@ -45,6 +50,49 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-4">
+        <div className="bg-card border border-border rounded-[24px] p-5 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-muted-foreground" />
+                Hybrid Pro plan
+              </span>
+              <p className="text-[10px] text-muted-foreground">
+                {subLoading
+                  ? 'Checking your access…'
+                  : active
+                    ? `${subscription?.planName} · expires ${
+                        subscription?.expiresAt
+                          ? new Date(subscription.expiresAt).toLocaleDateString()
+                          : 'soon'
+                      }`
+                    : 'No active plan. Subscribe to unlock tracking.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => router.push('/subscribe')}
+              className="h-9 px-3 rounded-full bg-primary text-primary-foreground text-xs font-bold cursor-pointer active:scale-95"
+            >
+              {active ? 'Change plan' : 'View plans'}
+            </button>
+            {active && subscription && (
+              <a
+                href={checkoutUrl({
+                  planId: subscription.planId,
+                  email: user?.email,
+                  userId: user?.id,
+                })}
+                className="h-9 px-3 rounded-full border border-border text-xs font-bold flex items-center"
+              >
+                Renew
+              </a>
+            )}
+          </div>
+        </div>
+
         {/* Weight Unit */}
         <div className="bg-card border border-border rounded-[24px] p-5 flex justify-between items-center">
           <div className="space-y-0.5">

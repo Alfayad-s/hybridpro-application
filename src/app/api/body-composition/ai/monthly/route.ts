@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { requireFeature } from '@/lib/subscriptions/require-feature'
 import { completeGroqTextChat } from '@/lib/ai/complete'
 import { listReportsForUser } from '@/lib/body-composition/db'
 
@@ -7,11 +7,9 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 export async function POST() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const gate = await requireFeature('body_composition_ai')
+  if (!gate.ok) return gate.response
+  const { user } = gate
 
   const reports = await listReportsForUser(user.id)
   const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
