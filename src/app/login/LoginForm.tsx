@@ -79,6 +79,8 @@ export default function LoginForm() {
   })
 
   const otpEmail = watchOtp('email')
+  const paidWelcome = searchParams.get('welcome') === '1'
+  const afterAuthPath = paidWelcome ? '/dashboard?welcome=1' : '/dashboard'
 
   useEffect(() => {
     const presetEmail = searchParams.get('email')
@@ -148,7 +150,7 @@ export default function LoginForm() {
           return
         }
 
-        router.push('/dashboard')
+        router.push(afterAuthPath)
         router.refresh()
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -166,7 +168,7 @@ export default function LoginForm() {
           return
         }
 
-        router.push('/dashboard')
+        router.push(afterAuthPath)
         router.refresh()
       }
     } catch {
@@ -215,7 +217,7 @@ export default function LoginForm() {
           })
         }
 
-        router.push('/dashboard')
+        router.push(afterAuthPath)
         router.refresh()
         return
       }
@@ -229,7 +231,7 @@ export default function LoginForm() {
         })
       }
 
-      router.push('/dashboard')
+      router.push(afterAuthPath)
       router.refresh()
     } catch {
       hideActionLoading()
@@ -303,7 +305,7 @@ export default function LoginForm() {
         return
       }
 
-      setClientAuthNextPath('/dashboard')
+      setClientAuthNextPath(afterAuthPath)
       const supabase = createClient()
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -464,12 +466,31 @@ export default function LoginForm() {
           <BrandLogo size={64} className="rounded-[24px]" priority />
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">
-          {isSignUp ? 'Create an account' : 'Welcome back'}
+          {paidWelcome
+            ? 'Welcome to Hybrid Pro'
+            : isSignUp
+              ? 'Create an account'
+              : 'Welcome back'}
         </h2>
         <p className="text-sm text-muted-foreground mt-1 text-center">
-          {isSignUp ? 'Sign up to start tracking your lifts' : 'Sign in to access your workout metrics'}
+          {paidWelcome
+            ? 'Payment confirmed. Sign in with the same email to open the app.'
+            : isSignUp
+              ? 'Sign up to start tracking your lifts'
+              : 'Sign in to access your workout metrics'}
         </p>
       </div>
+
+      {paidWelcome && (
+        <div className="mb-4 rounded-[18px] border border-primary/30 bg-primary/10 px-4 py-3 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+            Payment successful
+          </p>
+          <p className="mt-1 text-sm text-foreground">
+            Your plan is active. Sign in to start training.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {error && (

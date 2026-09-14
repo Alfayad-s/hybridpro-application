@@ -83,6 +83,7 @@ import {
 } from '@/components/muscle-map'
 import type { MuscleHighlights } from '@/components/muscle-map'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
+import { PaymentWelcome } from '@/components/feedback/PaymentWelcome'
 import { ChallengesWidget } from '@/components/challenges/challenges-widget'
 import { RecoveryGroupSheet } from '@/components/recovery/RecoveryGroupSheet'
 
@@ -900,6 +901,7 @@ export default function DashboardPage() {
       </div>
 
       <InstallPrompt />
+      <PaymentWelcome />
       {/* Streak */}
       {hydrated && historyStats.streakDays > 0 && (
         <div className="flex justify-center">
