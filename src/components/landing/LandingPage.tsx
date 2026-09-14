@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Outfit, DM_Sans } from 'next/font/google'
+import { Outfit } from 'next/font/google'
 import { AnimatePresence, motion } from 'framer-motion'
 import { NoiseBackground } from '@/components/ui/noise-background'
 import PillNav from '@/components/landing/PillNav'
@@ -11,16 +11,10 @@ import StrokeText from '@/components/landing/StrokeText'
 import ParticleText from '@/components/ParticleText'
 import { cn } from '@/lib/utils'
 
-const display = Outfit({
+const sans = Outfit({
   subsets: ['latin'],
-  weight: ['500', '600', '700', '800'],
+  weight: ['400', '500', '600', '700', '800'],
   variable: '--font-landing-display',
-})
-
-const body = DM_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-landing-body',
 })
 
 const HERO_IMAGES = [
@@ -90,8 +84,8 @@ function HeroSlideshow() {
 export function LandingPage() {
   return (
     <div
-      className={`${display.variable} ${body.variable} relative flex min-h-dvh flex-col overflow-x-hidden p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground md:p-4`}
-      style={{ fontFamily: 'var(--font-landing-body), system-ui, sans-serif' }}
+      className={`${sans.variable} ${sans.className} relative flex min-h-dvh flex-col overflow-x-hidden p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground md:p-4`}
+      style={{ fontFamily: 'var(--font-landing-display), system-ui, sans-serif' }}
     >
       <PillNav
         logo="/company-logo.png"
@@ -119,7 +113,7 @@ export function LandingPage() {
         <div className="h-[6.25rem] w-full sm:h-[7.25rem] md:h-[8.5rem]">
           <ParticleText
             text="HYBRID PRO"
-            color="#F8FAFC"
+            color="#8BB820"
             highlightColor="#8BB820"
             particleSize={2.8}
             density={3}
@@ -133,7 +127,7 @@ export function LandingPage() {
             fontSize="clamp(2.6rem, 16vw, 5.5rem)"
             fontWeight={800}
             fontFamily="inherit"
-            glow
+            glow={false}
             className="h-full"
           />
         </div>

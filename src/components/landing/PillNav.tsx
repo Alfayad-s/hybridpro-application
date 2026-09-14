@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { gsap } from 'gsap'
+import { CompanyMark } from '@/components/brand/CompanyMark'
 import './PillNav.css'
 
 export type PillNavItem = {
@@ -27,8 +28,8 @@ type PillNavProps = {
 }
 
 export default function PillNav({
-  logo,
-  logoAlt = 'Logo',
+  logo: _logo,
+  logoAlt = 'Hybrid Pro',
   items,
   activeHref,
   className = '',
@@ -45,7 +46,7 @@ export default function PillNav({
   const circleRefs = useRef<(HTMLSpanElement | null)[]>([])
   const tlRefs = useRef<(gsap.core.Timeline | null)[]>([])
   const activeTweenRefs = useRef<(gsap.core.Tween | null)[]>([])
-  const logoImgRef = useRef<HTMLImageElement | null>(null)
+  const logoMarkRef = useRef<HTMLSpanElement | null>(null)
   const logoTweenRef = useRef<gsap.core.Tween | null>(null)
   const hamburgerRef = useRef<HTMLButtonElement | null>(null)
   const mobileMenuRef = useRef<HTMLDivElement | null>(null)
@@ -165,11 +166,11 @@ export default function PillNav({
   }
 
   const handleLogoEnter = () => {
-    const img = logoImgRef.current
-    if (!img) return
+    const mark = logoMarkRef.current
+    if (!mark) return
     logoTweenRef.current?.kill()
-    gsap.set(img, { rotate: 0 })
-    logoTweenRef.current = gsap.to(img, {
+    gsap.set(mark, { rotate: 0 })
+    logoTweenRef.current = gsap.to(mark, {
       rotate: 360,
       duration: 0.2,
       ease,
@@ -291,24 +292,26 @@ export default function PillNav({
           <Link
             className="pill-logo"
             href={items[0].href}
-            aria-label="Home"
+            aria-label={logoAlt}
             onMouseEnter={handleLogoEnter}
             role="menuitem"
             ref={logoRef}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logo} alt={logoAlt} ref={logoImgRef} />
+            <span className="pill-logo-mark" ref={logoMarkRef}>
+              <CompanyMark className="h-7 w-auto" />
+            </span>
           </Link>
         ) : (
           <a
             className="pill-logo"
             href={items?.[0]?.href || '#'}
-            aria-label="Home"
+            aria-label={logoAlt}
             onMouseEnter={handleLogoEnter}
             ref={logoRef}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logo} alt={logoAlt} ref={logoImgRef} />
+            <span className="pill-logo-mark" ref={logoMarkRef}>
+              <CompanyMark className="h-7 w-auto" />
+            </span>
           </a>
         )}
 
