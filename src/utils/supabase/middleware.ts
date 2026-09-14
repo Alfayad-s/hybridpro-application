@@ -111,6 +111,15 @@ export async function updateSession(request: NextRequest) {
   return supabaseResponse
 }
 
+type SubscriptionRow = {
+  plan_id: string | null
+  status: string | null
+  expires_at: string | null
+  user_id: string | null
+  email: string | null
+  updated_at: string | null
+}
+
 async function readSubscriptionAccess(
   supabase: ReturnType<typeof createServerClient>,
   userId: string,
@@ -132,7 +141,8 @@ async function readSubscriptionAccess(
   }
 
   const now = Date.now()
-  const active = (data || []).find((row) => {
+  const rows = (data ?? []) as SubscriptionRow[]
+  const active = rows.find((row) => {
     if (row.status !== 'active') return false
     if (!row.expires_at) return true
     return new Date(row.expires_at).getTime() > now
@@ -141,6 +151,6 @@ async function readSubscriptionAccess(
   return {
     tableReady: true,
     active: Boolean(active),
-    planId: (active?.plan_id as string | undefined) ?? null,
+    planId: active?.plan_id ?? null,
   }
 }

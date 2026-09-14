@@ -13,6 +13,7 @@ const PDF_TYPES = new Set(['application/pdf'])
 export async function POST(request: Request) {
   const gate = await requireFeature('body_composition')
   if (!gate.ok) return gate.response
+  const { user } = gate
 
   let form: FormData
   try {
