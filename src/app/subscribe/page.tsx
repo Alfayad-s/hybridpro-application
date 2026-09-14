@@ -1,13 +1,32 @@
 'use client'
 
+import { Suspense, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Check } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { checkoutUrl, pricingPlans } from '@/lib/subscriptions/plans'
 import { useSubscription } from '@/hooks/useSubscription'
 
-export default function SubscribePage() {
+function SubscribeBody() {
+  const router = useRouter()
+  const params = useSearchParams()
   const user = useAuthStore((s) => s.user)
   const { subscription, active, planId } = useSubscription()
+  const justPaid = params.get('welcome') === '1'
+
+  useEffect(() => {
+    if (justPaid) {
+      router.replace(user ? '/dashboard?welcome=1' : '/login?welcome=1')
+    }
+  }, [justPaid, router, user])
+
+  if (justPaid) {
+    return (
+      <div className="px-6 py-16 text-center text-sm text-muted-foreground">
+        Payment confirmed. Opening Hybrid Pro…
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6 pb-10">
@@ -80,5 +99,17 @@ export default function SubscribePage() {
         })}
       </div>
     </div>
+  )
+}
+
+export default function SubscribePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="px-6 py-16 text-center text-sm text-muted-foreground">Loading plans…</div>
+      }
+    >
+      <SubscribeBody />
+    </Suspense>
   )
 }

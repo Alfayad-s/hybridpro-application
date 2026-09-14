@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
+const JUST_PAID_COOKIE = 'hp_just_paid'
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -33,6 +35,39 @@ export async function updateSession(request: NextRequest) {
 
   const url = request.nextUrl.clone()
   const pathname = url.pathname
+  const justPaid =
+    request.nextUrl.searchParams.get('welcome') === '1' ||
+    request.cookies.get(JUST_PAID_COOKIE)?.value === '1'
+
+  const redirectTo = (path: string, keepWelcome = justPaid) => {
+    url.pathname = path
+    const email = url.searchParams.get('email')
+    url.search = ''
+    if (keepWelcome) {
+      url.searchParams.set('welcome', '1')
+      if (email) url.searchParams.set('email', email)
+    }
+    const response = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      response.cookies.set(cookie)
+    })
+    if (keepWelcome) {
+      response.cookies.set(JUST_PAID_COOKIE, '1', {
+        path: '/',
+        maxAge: 10 * 60,
+        sameSite: 'lax',
+      })
+    }
+    return response
+  }
+
+  if (justPaid) {
+    supabaseResponse.cookies.set(JUST_PAID_COOKIE, '1', {
+      path: '/',
+      maxAge: 10 * 60,
+      sameSite: 'lax',
+    })
+  }
 
   // Leave the PKCE verifier / session cookies alone during the OAuth exchange.
   if (pathname.startsWith('/auth/callback')) {
@@ -60,13 +95,20 @@ export async function updateSession(request: NextRequest) {
     pathname.includes('.')
 
   if (!user && !isPublicRoute && !isAsset) {
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    return redirectTo('/login')
   }
 
   if (user && (pathname === '/login' || pathname === '/' || pathname === '/forgot-password')) {
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
+    return redirectTo('/dashboard')
+  }
+
+  // After a successful website payment, never dump the user on /subscribe.
+  if (justPaid && pathname === '/subscribe') {
+    return user ? redirectTo('/dashboard') : redirectTo('/login')
+  }
+
+  if (user && justPaid && !isAsset) {
+    return supabaseResponse
   }
 
   if (user && !isAsset) {
@@ -86,9 +128,7 @@ export async function updateSession(request: NextRequest) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json({ error: 'Subscription required' }, { status: 402 })
       }
-      url.pathname = '/subscribe'
-      url.search = ''
-      return NextResponse.redirect(url)
+      return redirectTo('/subscribe', false)
     }
 
     if (access.active) {
@@ -103,7 +143,11 @@ export async function updateSession(request: NextRequest) {
         }
         url.pathname = '/subscribe'
         url.search = 'upgrade=performance'
-        return NextResponse.redirect(url)
+        const response = NextResponse.redirect(url)
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+          response.cookies.set(cookie)
+        })
+        return response
       }
     }
   }
@@ -132,7 +176,7 @@ async function readSubscriptionAccess(
     .limit(5)
 
   query = email
-    ? query.or(`user_id.eq.${userId},email.eq.${email.toLowerCase()}`)
+    ? query.or(`user_id.eq.${userId},email.eq."${email.toLowerCase()}"`)
     : query.eq('user_id', userId)
 
   const { data, error } = await query
