@@ -29,16 +29,26 @@ export function daysLeft(expiresAt: string | null | undefined) {
 export function useSubscription() {
   const [subscription, setSubscription] = useState<ClientSubscription | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeFromApi, setActiveFromApi] = useState<boolean | null>(null)
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
       try {
         const res = await fetch('/api/subscriptions/me', { cache: 'no-store' })
-        const data = (await res.json()) as { subscription?: ClientSubscription | null }
-        if (!cancelled) setSubscription(data.subscription ?? null)
+        const data = (await res.json()) as {
+          active?: boolean
+          subscription?: ClientSubscription | null
+        }
+        if (!cancelled) {
+          setSubscription(data.subscription ?? null)
+          setActiveFromApi(typeof data.active === 'boolean' ? data.active : null)
+        }
       } catch {
-        if (!cancelled) setSubscription(null)
+        if (!cancelled) {
+          setSubscription(null)
+          setActiveFromApi(null)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -49,7 +59,7 @@ export function useSubscription() {
     }
   }, [])
 
-  const active = isActiveSubscription(subscription)
+  const active = activeFromApi ?? isActiveSubscription(subscription)
   return {
     subscription,
     loading,

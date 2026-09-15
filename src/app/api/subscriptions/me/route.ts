@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import {
   backendAttachSubscription,
-  backendGetSubscription,
+  backendGetPlan,
 } from '@/lib/subscriptions/backend'
 
 export const runtime = 'nodejs'
@@ -27,11 +27,18 @@ export async function GET() {
   }
 
   try {
-    const subscription = await backendGetSubscription({
+    const plan = await backendGetPlan({
       userId: user.id,
       email: user.email,
     })
-    return NextResponse.json({ subscription })
+    return NextResponse.json({
+      active: Boolean(plan.active),
+      planId: plan.planId ?? null,
+      planName: plan.planName ?? null,
+      expiresAt: plan.expiresAt ?? null,
+      daysRemaining: plan.daysRemaining ?? null,
+      subscription: plan.subscription ?? null,
+    })
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Could not load subscription' },

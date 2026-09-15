@@ -10,7 +10,21 @@ function PaymentWelcomeInner() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (params.get('welcome') === '1') setOpen(true)
+    if (params.get('welcome') !== '1') return
+    let cancelled = false
+    const check = async () => {
+      try {
+        const res = await fetch('/api/subscriptions/me', { cache: 'no-store' })
+        const data = (await res.json()) as { active?: boolean }
+        if (!cancelled && data.active) setOpen(true)
+      } catch {
+        if (!cancelled) setOpen(false)
+      }
+    }
+    void check()
+    return () => {
+      cancelled = true
+    }
   }, [params])
 
   if (!open) return null

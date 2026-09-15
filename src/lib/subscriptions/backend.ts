@@ -31,11 +31,45 @@ export async function backendGetPlans() {
   return backendFetch('/api/subscriptions/plans')
 }
 
-export async function backendGetSubscription(input: { email?: string | null; userId?: string | null }) {
+export async function backendGetPlan(input: { email?: string | null; userId?: string | null }) {
   const params = new URLSearchParams()
   if (input.email) params.set('email', input.email)
   if (input.userId) params.set('userId', input.userId)
-  const data = await backendFetch(`/api/subscriptions/status?${params}`)
+  const query = params.toString()
+
+  try {
+    return await backendFetch(`/api/subscriptions/plan?${query}`)
+  } catch (planError) {
+    console.error('[backendGetPlan] plan', planError)
+    const data = await backendFetch(`/api/subscriptions/status?${query}`)
+    const subscription = (data.subscription ?? null) as {
+      planId?: string | null
+      planName?: string | null
+      status?: string | null
+      expiresAt?: string | null
+    } | null
+    const active = Boolean(
+      subscription &&
+        subscription.status === 'active' &&
+        (!subscription.expiresAt || new Date(subscription.expiresAt).getTime() > Date.now()),
+    )
+    const daysRemaining =
+      active && subscription?.expiresAt
+        ? Math.max(0, Math.ceil((new Date(subscription.expiresAt).getTime() - Date.now()) / 86_400_000))
+        : null
+    return {
+      active,
+      planId: active ? subscription?.planId ?? null : null,
+      planName: active ? subscription?.planName ?? null : null,
+      expiresAt: subscription?.expiresAt ?? null,
+      daysRemaining,
+      subscription,
+    }
+  }
+}
+
+export async function backendGetSubscription(input: { email?: string | null; userId?: string | null }) {
+  const data = await backendGetPlan(input)
   return data.subscription ?? null
 }
 
