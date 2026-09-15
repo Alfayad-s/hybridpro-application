@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { continueCheckoutPath, isPricingPlanId } from '@/lib/subscriptions/plans'
 
 const JUST_PAID_COOKIE = 'hp_just_paid'
 
@@ -40,9 +41,10 @@ export async function updateSession(request: NextRequest) {
     request.cookies.get(JUST_PAID_COOKIE)?.value === '1'
 
   const redirectTo = (path: string, keepWelcome = justPaid) => {
-    url.pathname = path
     const email = url.searchParams.get('email')
-    url.search = ''
+    const parsed = new URL(path, url.origin)
+    url.pathname = parsed.pathname
+    url.search = parsed.search
     if (keepWelcome) {
       url.searchParams.set('welcome', '1')
       if (email) url.searchParams.set('email', email)
@@ -82,6 +84,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/api/auth/') ||
     pathname === '/api/subscriptions/plans' ||
+    pathname === '/api/subscriptions/me' ||
     pathname === '/api/subscriptions/activate' ||
     pathname === '/api/subscriptions/status' ||
     pathname.startsWith('/opengraph-image') ||
@@ -94,17 +97,58 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/static') ||
     pathname.includes('.')
 
+  const unpaidAllowed =
+    pathname === '/' ||
+    pathname === '/subscribe' ||
+    pathname === '/login' ||
+    pathname === '/forgot-password' ||
+    pathname === '/api/profile/ensure' ||
+    pathname === '/api/subscriptions/me' ||
+    pathname === '/api/subscriptions/attach'
+
+  const landingPlansPath =
+    request.nextUrl.searchParams.get('upgrade') === 'performance'
+      ? '/?plans=1&upgrade=performance'
+      : '/?plans=1'
+
+  // Paid members skip the marketing landing. Everyone else stays on home + plans.
+  if (pathname === '/') {
+    if (justPaid) {
+      return user ? redirectTo('/dashboard') : redirectTo('/login')
+    }
+    if (user) {
+      const access = await readSubscriptionAccess(supabase, user.id, user.email)
+      const wantsPlans =
+        request.nextUrl.searchParams.get('plans') === '1' ||
+        request.nextUrl.searchParams.get('upgrade') === 'performance'
+      if (access.active && !wantsPlans) return redirectTo('/dashboard')
+    }
+    return supabaseResponse
+  }
+
+  if (pathname === '/subscribe') {
+    if (justPaid) {
+      return user ? redirectTo('/dashboard') : redirectTo('/login')
+    }
+    return redirectTo(landingPlansPath, false)
+  }
+
   if (!user && !isPublicRoute && !isAsset) {
-    return redirectTo('/login')
+    return redirectTo('/?plans=1', false)
   }
 
-  if (user && (pathname === '/login' || pathname === '/' || pathname === '/forgot-password')) {
-    return redirectTo('/dashboard')
-  }
-
-  // After a successful website payment, never dump the user on /subscribe.
-  if (justPaid && pathname === '/subscribe') {
-    return user ? redirectTo('/dashboard') : redirectTo('/login')
+  if (user && (pathname === '/login' || pathname === '/forgot-password') && !justPaid) {
+    const checkoutPlan = url.searchParams.get('checkout')
+    const reauth = url.searchParams.get('reauth') === '1'
+    if (pathname === '/login' && reauth) {
+      return supabaseResponse
+    }
+    if (pathname === '/login' && checkoutPlan && isPricingPlanId(checkoutPlan)) {
+      return redirectTo(continueCheckoutPath(checkoutPlan), false)
+    }
+    const access = await readSubscriptionAccess(supabase, user.id, user.email)
+    if (access.active) return redirectTo('/dashboard')
+    return redirectTo('/?plans=1', false)
   }
 
   if (user && justPaid && !isAsset) {
@@ -113,22 +157,12 @@ export async function updateSession(request: NextRequest) {
 
   if (user && !isAsset) {
     const access = await readSubscriptionAccess(supabase, user.id, user.email)
-    if (!access.tableReady) {
-      return supabaseResponse
-    }
-
-    const unpaidAllowed =
-      pathname === '/subscribe' ||
-      pathname === '/settings' ||
-      pathname === '/api/profile/ensure' ||
-      pathname === '/api/subscriptions/me' ||
-      pathname === '/api/subscriptions/attach'
 
     if (!access.active && !unpaidAllowed && !isPublicRoute) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json({ error: 'Subscription required' }, { status: 402 })
       }
-      return redirectTo('/subscribe', false)
+      return redirectTo('/?plans=1', false)
     }
 
     if (access.active) {
@@ -141,13 +175,7 @@ export async function updateSession(request: NextRequest) {
         if (pathname.startsWith('/api/')) {
           return NextResponse.json({ error: 'Upgrade required' }, { status: 403 })
         }
-        url.pathname = '/subscribe'
-        url.search = 'upgrade=performance'
-        const response = NextResponse.redirect(url)
-        supabaseResponse.cookies.getAll().forEach((cookie) => {
-          response.cookies.set(cookie)
-        })
-        return response
+        return redirectTo('/?plans=1&upgrade=performance', false)
       }
     }
   }

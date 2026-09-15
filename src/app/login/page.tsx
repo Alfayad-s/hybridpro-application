@@ -1,18 +1,31 @@
-'use client'
-
-import { Suspense } from 'react'
 import LoginForm from './LoginForm'
 
-export default function LoginPage() {
+export const dynamic = 'force-dynamic'
+
+type LoginSearch = {
+  welcome?: string
+  checkout?: string
+  reauth?: string
+  email?: string
+  error?: string
+  message?: string
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<LoginSearch>
+}) {
+  const params = await searchParams
+
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-dvh items-center justify-center bg-background">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
+    <LoginForm
+      paidWelcome={params.welcome === '1'}
+      checkoutPlan={params.checkout ?? null}
+      reauth={params.reauth === '1'}
+      presetEmail={params.email ?? null}
+      authError={params.error ?? null}
+      authMessage={params.message ?? null}
+    />
   )
 }

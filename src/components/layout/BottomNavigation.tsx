@@ -144,7 +144,7 @@ export function BottomNavigation() {
           </Link>
 
           <Link
-            href={canUseAi ? '/ai' : '/subscribe?upgrade=performance'}
+            href={canUseAi ? '/ai' : '/?plans=1&upgrade=performance'}
             aria-label={canUseAi ? 'Open AI chat' : 'Upgrade for AI coach'}
             className="flex flex-col items-center justify-center gap-1 min-h-11 py-1.5 text-primary transition-all duration-200 active:scale-95"
           >

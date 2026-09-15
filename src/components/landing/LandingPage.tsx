@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
 import { Outfit } from 'next/font/google'
 import { AnimatePresence, motion } from 'framer-motion'
 import { NoiseBackground } from '@/components/ui/noise-background'
 import PillNav from '@/components/landing/PillNav'
+import { LandingPlans } from '@/components/landing/LandingPlans'
 import StrokeText from '@/components/landing/StrokeText'
 import ParticleText from '@/components/ParticleText'
 import { cn } from '@/lib/utils'
@@ -84,7 +84,7 @@ function HeroSlideshow() {
 export function LandingPage() {
   return (
     <div
-      className={`${sans.variable} ${sans.className} relative flex min-h-dvh flex-col overflow-x-hidden p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground md:p-4`}
+      className={`${sans.variable} ${sans.className} relative flex flex-col overflow-x-hidden p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foreground md:p-4`}
       style={{ fontFamily: 'var(--font-landing-display), system-ui, sans-serif' }}
     >
       <PillNav
@@ -92,6 +92,7 @@ export function LandingPage() {
         logoAlt="Hybrid Pro"
         items={[
           { label: 'Home', href: '/' },
+          { label: 'Plans', href: '#plans' },
           { label: 'Sign in', href: '/login' },
         ]}
         activeHref="/"
@@ -134,7 +135,7 @@ export function LandingPage() {
       </div>
 
       {/* Split hero under floating pill nav */}
-      <section className="relative grid min-h-0 flex-1 grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+      <section className="relative grid min-h-[72dvh] grid-cols-1 gap-3 md:min-h-[calc(100dvh-9rem)] md:grid-cols-2 md:gap-4">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 md:w-1/2"
@@ -187,12 +188,19 @@ export function LandingPage() {
                 ]}
                 noiseIntensity={0.18}
               >
-                <Link
-                  href="/login"
+                <a
+                  href="#plans"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    document.getElementById('plans')?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start',
+                    })
+                  }}
                   className="inline-flex h-12 w-full min-w-[200px] cursor-pointer items-center justify-center rounded-full bg-linear-to-r from-neutral-100 via-neutral-100 to-white px-7 text-[15px] font-bold text-black shadow-[0px_2px_0px_0px_var(--color-neutral-50)_inset,0px_0.5px_1px_0px_var(--color-neutral-400)] transition-all duration-100 active:scale-98 dark:from-black dark:via-black dark:to-neutral-900 dark:text-white dark:shadow-[0px_1px_0px_0px_var(--color-neutral-950)_inset,0px_1px_0px_0px_var(--color-neutral-800)] md:h-[52px] md:min-w-[240px] md:px-9"
                 >
-                  Start training →
-                </Link>
+                  View plans →
+                </a>
               </NoiseBackground>
             </div>
           </div>
@@ -203,6 +211,8 @@ export function LandingPage() {
           <HeroSlideshow />
         </div>
       </section>
+
+      <LandingPlans />
     </div>
   )
 }

@@ -108,6 +108,14 @@ export function isPricingPlanId(id: string): id is PricingPlanId {
 export const WEBSITE_URL =
   process.env.NEXT_PUBLIC_WEBSITE_URL?.replace(/\/$/, '') || 'https://hybridpro.in'
 
+/** Landing second section — used instead of a standalone /subscribe page. */
+export const LANDING_PLANS_PATH = '/?plans=1'
+export const LANDING_PLANS_UPGRADE_PATH = '/?plans=1&upgrade=performance'
+
+export function continueCheckoutPath(planId: PricingPlanId) {
+  return `/auth/continue-checkout?plan=${planId}`
+}
+
 export function checkoutUrl(input: {
   planId: PricingPlanId
   email?: string | null

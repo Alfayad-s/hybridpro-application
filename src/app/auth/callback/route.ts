@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
       id: user.id,
       fullName: fullNameFromAuthUser(user),
       avatarUrl: avatarUrlFromAuthUser(user),
+      email: user.email,
     })
   }
 

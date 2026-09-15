@@ -18,6 +18,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
   const hideBottomPad =
     pathname === '/' ||
     pathname === '/login' ||
+    pathname === '/subscribe' ||
     pathname === '/forgot-password' ||
     pathname === '/workout' ||
     pathname === '/ai' ||
@@ -30,6 +31,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
     pathname !== '/ai' &&
     pathname !== '/' &&
     pathname !== '/login' &&
+    pathname !== '/subscribe' &&
     pathname !== '/forgot-password' &&
     !pathname?.startsWith('/auth/')
 

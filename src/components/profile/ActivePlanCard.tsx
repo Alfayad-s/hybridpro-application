@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { CreditCard } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import { checkoutUrl } from '@/lib/subscriptions/plans'
+import { checkoutUrl, LANDING_PLANS_PATH } from '@/lib/subscriptions/plans'
 import { daysLeft, useSubscription } from '@/hooks/useSubscription'
 
 export function ActivePlanCard() {
@@ -55,12 +55,12 @@ export function ActivePlanCard() {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => router.push('/subscribe')}
+          onClick={() => router.push(LANDING_PLANS_PATH)}
           className="h-10 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground active:scale-95"
         >
           {active ? 'Change plan' : 'View plans'}
         </button>
-        {active && subscription && (
+        {active && subscription && user ? (
           <a
             href={checkoutUrl({
               planId: subscription.planId,
@@ -71,7 +71,7 @@ export function ActivePlanCard() {
           >
             Renew
           </a>
-        )}
+        ) : null}
       </div>
     </div>
   )
