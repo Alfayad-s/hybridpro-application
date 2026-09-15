@@ -205,32 +205,34 @@ async function readSubscriptionAccess(
 async function readSubscriptionAccessFromBackend(userId: string, email?: string | null) {
   const base = process.env.HYBRID_BACKEND_URL?.trim().replace(/\/$/, '')
   const secret = process.env.INTERNAL_API_SECRET?.trim()
-  if (!base || !secret) return null
-
-  try {
-    const params = new URLSearchParams()
-    params.set('userId', userId)
-    if (email) params.set('email', email)
-    const res = await fetch(`${base}/api/subscriptions/status?${params}`, {
-      headers: { Authorization: `Bearer ${secret}` },
-      cache: 'no-store',
-    })
-    if (!res.ok) return null
-    const data = (await res.json()) as {
-      subscription?: { status?: string; planId?: string | null; expiresAt?: string | null }
+  if (base && secret) {
+    try {
+      const params = new URLSearchParams()
+      params.set('userId', userId)
+      if (email) params.set('email', email)
+      const res = await fetch(`${base}/api/subscriptions/plan?${params}`, {
+        headers: { Authorization: `Bearer ${secret}` },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const data = (await res.json()) as {
+          active?: boolean
+          planId?: string | null
+        }
+        if (data.active) {
+          return {
+            tableReady: true,
+            active: true,
+            planId: data.planId ?? null,
+          }
+        }
+      }
+    } catch {
+      /* fall through to Supabase */
     }
-    const sub = data.subscription
-    const active =
-      sub?.status === 'active' &&
-      (!sub.expiresAt || new Date(sub.expiresAt).getTime() > Date.now())
-    return {
-      tableReady: true,
-      active,
-      planId: active ? sub?.planId ?? null : null,
-    }
-  } catch {
-    return null
   }
+
+  return null
 }
 
 async function readSubscriptionAccessFromSupabase(

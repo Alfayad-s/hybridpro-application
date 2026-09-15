@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, isNull, or } from 'drizzle-orm'
+import { desc, eq, or } from 'drizzle-orm'
 import { db } from '@/db'
 import { payments, subscriptions } from '@/db/schema'
 import { getPricingPlan, isPricingPlanId, type PricingPlanId } from './plans'
@@ -82,14 +82,21 @@ async function findLatestForIdentity(input: { userId?: string | null; email?: st
 
   if (clauses.length === 0) return null
 
-  const [row] = await db
+  const rows = await db
     .select()
     .from(subscriptions)
     .where(or(...clauses))
     .orderBy(desc(subscriptions.updatedAt))
-    .limit(1)
+    .limit(10)
 
-  return row ?? null
+  const now = Date.now()
+  return (
+    rows.find(
+      (row) => row.status === 'active' && (!row.expiresAt || row.expiresAt.getTime() > now)
+    ) ??
+    rows[0] ??
+    null
+  )
 }
 
 export async function getSubscriptionForIdentity(input: {
@@ -116,7 +123,7 @@ export async function attachSubscriptionToUser(input: { userId: string; email: s
   await db
     .update(subscriptions)
     .set({ userId: input.userId })
-    .where(and(eq(subscriptions.email, email), isNull(subscriptions.userId)))
+    .where(eq(subscriptions.email, email))
 
   return getSubscriptionForIdentity({ userId: input.userId, email })
 }

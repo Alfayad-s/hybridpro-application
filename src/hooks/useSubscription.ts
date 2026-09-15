@@ -42,7 +42,7 @@ export function useSubscription() {
         }
         if (!cancelled) {
           setSubscription(data.subscription ?? null)
-          setActiveFromApi(typeof data.active === 'boolean' ? data.active : null)
+          setActiveFromApi(res.ok && typeof data.active === 'boolean' ? data.active : null)
         }
       } catch {
         if (!cancelled) {
